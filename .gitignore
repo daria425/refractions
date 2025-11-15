@@ -1,0 +1,7 @@
+.env
+.venv
+.github/instructions
+__pycache__
+*.pyc
+generated_images/
+credentials/
