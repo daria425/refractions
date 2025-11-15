@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from google.cloud import storage
 
-from app.creds import get_google_service_account_info
+from app.utils.creds import get_google_service_account_info
 
 service_account_info = get_google_service_account_info()
 storage_client = storage.Client.from_service_account_info(service_account_info)

@@ -1,6 +1,6 @@
 from typing import Any, Optional, Literal
 from pydantic import BaseModel
-from app.logger import logger
+from app.utils.logger import logger
 
 
 class ResponseSuccess(BaseModel):

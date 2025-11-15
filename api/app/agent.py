@@ -1,10 +1,10 @@
-from app.utils_lib import format_prompt
-from app.image_utils import create_image_input
+from app.utils.utils_lib import format_prompt
+from app.utils.image_utils import create_image_input
 from google.genai import types
 from app.genai_client import google_client
-from app.response_handlers import handle_llm_response, ResponseSuccess
+from app.utils.response_handlers import handle_llm_response, ResponseSuccess
 from pydantic import BaseModel
-from app.decorators import retry_on_failure
+from app.utils.decorators import retry_on_failure
 
 class ImagePrompts(BaseModel):
     hero:str
@@ -43,7 +43,7 @@ You also have access to the reference image, which you must use to inform the st
     return ResponseSuccess(response=response.parsed)
 
 if __name__=="__main__":
-    from app.image_utils import get_image_bytes
+    from app.utils.image_utils import get_image_bytes
     image_path="./input_images/tech_drawing_sample.png"
     vision="Minimal luxury"
     image_bytes= get_image_bytes(image_path)

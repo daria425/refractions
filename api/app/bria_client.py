@@ -4,8 +4,8 @@ import json
 from typing import Any, Dict, Union
 import os
 from dotenv import load_dotenv
-from app.logger import logger
-from app.image_utils import download_image_from_url, encode_image_to_base64
+from app.utils.logger import logger
+from app.utils.image_utils import download_image_from_url, encode_image_to_base64
 load_dotenv()
 BRIA_API_TOKEN=os.getenv("BRIA_API_TOKEN")
 
@@ -88,63 +88,78 @@ class ImageGenClient:
     
 
     async def poll_for_status(self, request_id: str, interval: int = 2, timeout: int = 300) -> Dict[str, Any]:
-        """
-        Poll for request status until completion or timeout.
-        Uses async sleep for non-blocking waits.
-        """
-        status_url = f"{self.base_url.replace('/image/generate', '/status')}/{request_id}"
-        logger.info(f"Polling status URL: {status_url}")
-        
-        start_time = asyncio.get_event_loop().time()
-        
-        async with httpx.AsyncClient() as client:
-            while True:
-                status_response = await client.get(status_url, headers=self.headers)
-                status_response.raise_for_status()
-                status_data = status_response.json()
-                status_state = status_data.get("status")
-                result = status_data.get("result")
-                logger.info(f"Request {request_id} is {status_state}.")
+      """
+      Poll for request status until completion or timeout.
+      Uses async sleep for non-blocking waits.
+      """
+      status_url = f"{self.base_url.replace('/image/generate', '/status')}/{request_id}"
+      logger.info(f"Polling status URL: {status_url}")
+      
+      start_time = asyncio.get_event_loop().time()
+      
+      async with httpx.AsyncClient() as client:
+        while True:
+          status_response = await client.get(status_url, headers=self.headers)
+          status_response.raise_for_status()
+          status_data = status_response.json()
+          status_state = status_data.get("status")
+          result = status_data.get("result")
+          logger.info(f"Request {request_id} is {status_state}.")
 
-                if status_state == "COMPLETED":
-                    logger.info(f"Request {request_id} completed successfully")
-                    url= result.get("image_url")
-                    seed= result.get("seed")
-                    structured_prompt= result.get("structured_prompt")
-                    saved_path=download_image_from_url(url, save_to="file")
-                    return {
-                        "image_url": url,
-                        "seed": seed,
-                        "structured_prompt": structured_prompt, 
-                        "saved_path": saved_path
-                    }
+          if status_state == "ERROR":
+            # Extract any error details returned by the API
+            error_detail = status_data.get("error") 
+            logger.error(f"Request {request_id} failed with error: {error_detail}")
+            raise RuntimeError(f"Image generation request {request_id} failed: {error_detail}")
 
-                if asyncio.get_event_loop().time() - start_time > timeout:
-                    raise TimeoutError(f"Request {request_id} did not complete within {timeout} seconds")
+          if status_state == "COMPLETED":
+            logger.info(f"Request {request_id} completed successfully")
+            url= result.get("image_url")
+            seed= result.get("seed")
+            structured_prompt= result.get("structured_prompt")
+            saved_path=download_image_from_url(url, save_to="file")
+            return {
+              "image_url": url,
+              "seed": seed,
+              "structured_prompt": structured_prompt, 
+              "saved_path": saved_path
+            }
 
-                await asyncio.sleep(interval)
+          if asyncio.get_event_loop().time() - start_time > timeout:
+            raise TimeoutError(f"Request {request_id} did not complete within {timeout} seconds")
+
+          await asyncio.sleep(interval)
 
 
 # Example usage:
 async def main():
+    from app.utils.image_utils import get_image_bytes
+    from app.agent import translate_vision_to_image_prompt
+    import time
     url = "https://engine.prod.bria-api.com/v2/image/generate"
-    text_prompt="High-quality studio photograph of a modern leather handbag on a marble pedestal, soft diffused lighting, luxury editorial style"
-
     client = ImageGenClient(
         auth={"api_token": BRIA_API_TOKEN},
         base_url=url
     )
-    
-    try:
-        result_data= await client.create_image_from_text(
-            text_prompt,
-            model_version="FIBO"
-        )
-        logger.info(f"Generation completed! Result: {result_data}")
-        print(result_data)
-    except Exception as e:
-        logger.error(f"Generation failed: {e}")
-        raise
+    image_path="./input_images/tech_drawing_sample.png"
+    vision="Minimal luxury"
+    image_bytes= get_image_bytes(image_path)
+    prompts= translate_vision_to_image_prompt(vision, image_bytes)
+    processed_prompts=prompts.response.model_dump()
+
+    for k, v in processed_prompts.items():
+        logger.info(f"Generating image for {k} with prompt: {v}")
+        try:
+            result_data= await client.create_image_from_text(
+                text_prompt=v,
+                model_version="FIBO"
+            )
+            logger.info(f"Generation completed! Result: {result_data}")
+            print(result_data)
+            time.sleep(2)  # brief pause between requests
+        except Exception as e:
+            logger.error(f"Generation failed: {e}")
+            raise
 
 
 if __name__ == "__main__":

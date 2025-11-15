@@ -2,8 +2,8 @@ import time
 from functools import wraps
 from typing import Literal, ParamSpec, TypeVar
 
-from app.logger import logger
-from app.response_handlers import ResponseFailure
+from app.utils.logger import logger
+from app.utils.response_handlers import ResponseFailure
 
 P = ParamSpec("P")
 T = TypeVar("T")

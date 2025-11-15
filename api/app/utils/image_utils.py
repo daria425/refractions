@@ -4,7 +4,7 @@ import httpx
 from datetime import datetime, timezone
 import os
 import base64
-from app.logger import logger
+from app.utils.logger import logger
 from app.storage_service import upload_image_to_gcs
 from app.genai_client import google_client
 from google.genai import types
