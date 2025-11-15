@@ -1,10 +1,11 @@
 import httpx
 import asyncio
-from typing import Any, Dict
+import json
+from typing import Any, Dict, Union
 import os
 from dotenv import load_dotenv
 from app.logger import logger
-from app.image_utils import download_image_from_url
+from app.image_utils import download_image_from_url, encode_image_to_base64
 load_dotenv()
 BRIA_API_TOKEN=os.getenv("BRIA_API_TOKEN")
 
@@ -17,27 +18,56 @@ class ImageGenClient:
             **auth
         }
 
-    async def submit_image_gen_request(self, text_prompt: str, **params) -> Dict[str, Any]:
+    async def submit_image_gen_request(self, request_payload:Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate an image. Additional optional parameters can be passed via kwargs
         and will be merged into the JSON payload sent to the API.
         Example: await client.submit_image_gen_request("...", model_version="FIBO", width=1024, height=1024)
         """
-        payload = {"prompt": text_prompt}
-        payload.update(params)
-
-        logger.info(f"Submitting image generation request to {self.base_url} with payload keys: {list(payload.keys())}")
+        logger.info(f"Submitting image generation request to {self.base_url} with payload keys: {list(request_payload.keys())}")
         async with httpx.AsyncClient() as client:
-            response = await client.post(self.base_url, json=payload, headers=self.headers)
+            response = await client.post(self.base_url, json=request_payload, headers=self.headers)
             response.raise_for_status()
             return response.json()
     
-    async def create_image(self, text_prompt: str, **params) -> Dict[str, Any]:
+    async def create_image_from_text(self, text_prompt: str, **params) -> Dict[str, Any]:
         """
-        Submit an image generation request and poll until completion.
+        Submit an image generation request with text prompt and poll until completion.
         Returns the final result when ready.
         """
-        request_data = await self.submit_image_gen_request(text_prompt, **params)
+        request_payload = {"prompt": text_prompt}
+        request_payload.update(params)
+        request_data = await self.submit_image_gen_request(request_payload)
+        request_id = request_data["request_id"]
+        return await self.poll_for_status(request_id)
+    
+    async def create_image_from_structured_prompt(self, structured_prompt: Union[Dict[str, Any], str], **params) -> Dict[str, Any]:
+        """
+        Submit an image generation request with a structured prompt and poll until completion.
+        Returns the final result when ready.
+        """
+        # API returns/accepts structured_prompt as a JSON string. Allow callers to pass
+        # either a dict or a JSON string and normalize to string here.
+        if isinstance(structured_prompt, dict):
+            sp_string = json.dumps(structured_prompt)
+        else:
+            sp_string = structured_prompt
+
+        request_payload = {"structured_prompt": sp_string}
+        request_payload.update(params)
+        request_data = await self.submit_image_gen_request(request_payload)
+        request_id = request_data["request_id"]
+        return await self.poll_for_status(request_id)
+    
+    async def create_image_from_image(self, image_url: str, **params) -> Dict[str, Any]:
+        """
+        Submit an image generation request with an image URL and poll until completion.
+        Returns the final result when ready.
+        """
+        image_data= await encode_image_to_base64(image_url)
+        request_payload = {"images": [image_data]}
+        request_payload.update(params)
+        request_data = await self.submit_image_gen_request(request_payload)
         request_id = request_data["request_id"]
         return await self.poll_for_status(request_id)
     
@@ -91,11 +121,25 @@ async def main():
     )
     
     try:
-        result_data= await client.create_image(
+        result_data= await client.create_image_from_text(
             text_prompt,
             model_version="FIBO"
         )
         logger.info(f"Generation completed! Result: {result_data}")
+        print(result_data)
+        # structured_prompt may be a JSON string from the API – parse, modify, then re-submit
+        structured_prompt = result_data["structured_prompt"]
+        sp_obj = json.loads(structured_prompt) if isinstance(structured_prompt, str) else structured_prompt
+        sp_obj["style_medium"] = "digital_illustration"
+        sp_obj["artistic_style"] = "digital_illustration"
+        seed= result_data["seed"]
+        refined_image_data=await client.create_image_from_structured_prompt(
+            sp_obj,
+            seed=seed,
+            model_version="FIBO"
+        )
+        logger.info(f"Refined Generation completed! Result: {refined_image_data}")
+        print(refined_image_data)
     except Exception as e:
         logger.error(f"Generation failed: {e}")
         raise
