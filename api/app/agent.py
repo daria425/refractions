@@ -6,11 +6,15 @@ from app.utils.response_handlers import handle_llm_response, ResponseSuccess
 from pydantic import BaseModel
 from app.utils.decorators import retry_on_failure
 
+class PromptItem(BaseModel):
+    prompt:str
+    reasoning:str
+    
 class ImagePrompts(BaseModel):
-    hero:str
-    detail:str
-    environment:str
-    flatlay:str
+    hero:PromptItem
+    detail:PromptItem
+    environment:PromptItem
+    flatlay:PromptItem
 
 @retry_on_failure()
 def translate_vision_to_image_prompt(vision:str, image_bytes: bytes) -> ResponseSuccess:

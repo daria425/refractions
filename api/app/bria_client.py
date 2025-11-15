@@ -122,7 +122,8 @@ class ImageGenClient:
               "image_url": url,
               "seed": seed,
               "structured_prompt": structured_prompt, 
-              "saved_path": saved_path
+              "saved_path": saved_path, 
+              "request_id": request_id
             }
 
           if asyncio.get_event_loop().time() - start_time > timeout:
@@ -135,6 +136,12 @@ class ImageGenClient:
 async def main():
     from app.utils.image_utils import get_image_bytes
     from app.agent import translate_vision_to_image_prompt
+    from app.db.db_connection import DatabaseConnection
+    from app.db.db_collections import ImagesCollection
+    import json
+    db= DatabaseConnection.get_instance()
+    db.initialize_mongo_client()
+    images_collection= ImagesCollection()
     import time
     url = "https://engine.prod.bria-api.com/v2/image/generate"
     client = ImageGenClient(
@@ -148,14 +155,26 @@ async def main():
     processed_prompts=prompts.response.model_dump()
 
     for k, v in processed_prompts.items():
-        logger.info(f"Generating image for {k} with prompt: {v}")
+        text_prompt=v["prompt"]
+        reasoning=v["reasoning"]
+        logger.info(f"Generating image for {k} with prompt: {text_prompt}")
         try:
             result_data= await client.create_image_from_text(
-                text_prompt=v,
+                text_prompt=text_prompt,
                 model_version="FIBO"
             )
+            sp_dict=json.loads(result_data.get("structured_prompt", "{}"))
+            result_data["structured_prompt"]=sp_dict
             logger.info(f"Generation completed! Result: {result_data}")
-            print(result_data)
+            saved_data={
+               "result_data": result_data,
+               "generation_data":{
+                    "text_prompt": text_prompt,
+                    "reasoning": reasoning,
+               },
+                "shot_type": k
+            }
+            images_collection.insert_data(saved_data)
             time.sleep(2)  # brief pause between requests
         except Exception as e:
             logger.error(f"Generation failed: {e}")
