@@ -71,6 +71,21 @@ class ImageGenClient:
         request_id = request_data["request_id"]
         return await self.poll_for_status(request_id)
     
+    async def create_image_from_image_and_text(self, image_url: str, text_prompt: str, **params) -> Dict[str, Any]:
+        """
+        Submit an image generation request with an image URL and text prompt, then poll until completion.
+        Returns the final result when ready.
+        """
+        image_data= await encode_image_to_base64(image_url)
+        request_payload = {
+            "images": [image_data],
+            "prompt": text_prompt
+        }
+        request_payload.update(params)
+        request_data = await self.submit_image_gen_request(request_payload)
+        request_id = request_data["request_id"]
+        return await self.poll_for_status(request_id)
+    
 
     async def poll_for_status(self, request_id: str, interval: int = 2, timeout: int = 300) -> Dict[str, Any]:
         """
@@ -127,19 +142,6 @@ async def main():
         )
         logger.info(f"Generation completed! Result: {result_data}")
         print(result_data)
-        # structured_prompt may be a JSON string from the API – parse, modify, then re-submit
-        structured_prompt = result_data["structured_prompt"]
-        sp_obj = json.loads(structured_prompt) if isinstance(structured_prompt, str) else structured_prompt
-        sp_obj["style_medium"] = "digital_illustration"
-        sp_obj["artistic_style"] = "digital_illustration"
-        seed= result_data["seed"]
-        refined_image_data=await client.create_image_from_structured_prompt(
-            sp_obj,
-            seed=seed,
-            model_version="FIBO"
-        )
-        logger.info(f"Refined Generation completed! Result: {refined_image_data}")
-        print(refined_image_data)
     except Exception as e:
         logger.error(f"Generation failed: {e}")
         raise

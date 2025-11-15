@@ -6,6 +6,9 @@ import os
 import base64
 from app.logger import logger
 from app.storage_service import upload_image_to_gcs
+from app.genai_client import google_client
+from google.genai import types
+import io
 def download_image_from_url(url: str, save_to: Optional[Literal["file", "gcs"]]="file", dir_name:str="generated_images") -> str:
     """
     Download image content from a given URL.
@@ -81,4 +84,26 @@ async def encode_image_to_base64(source: Union[str, Path]) -> str:
         logger.error(f"Failed to encode image from {source_str}: {e}")
         raise
 
+# TO-DO: refactor to class wheni get bored
+def get_image_bytes(image_path: str) -> str:
+    """
+    Load image bytes from a local file path or URL.
+    """
+    if image_path.startswith("http://") or image_path.startswith("https://"):
+        img_bytes = httpx.get(image_path).content
+        return img_bytes
+    else:
+        with open(image_path, "rb") as img_file:
+            img_bytes = img_file.read()
+        return img_bytes
 
+
+def create_image_input(image_bytes: bytes):
+    max_bytes = 15 * 1024 * 1024  # 15 MB
+    size = len(image_bytes or b"")
+    if size > max_bytes:
+        image_file = google_client.files.upload(io.BytesIO(image_bytes))
+        return image_file
+    else:
+        image_file = types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
+    return image_file

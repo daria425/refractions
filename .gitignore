@@ -4,5 +4,6 @@
 __pycache__
 *.pyc
 generated_images/
+input_images/
 credentials/
 temp/

@@ -1,0 +1,47 @@
+{
+  "aesthetics": {
+    "aesthetic_score": "very high",
+    "color_scheme": "Monochromatic with bold accent colors; primarily black, white, and rich greys, enhanced with stylized highlights and brushwork for dramatic effect.",
+    "composition": "Artfully centered, with the handbag as the focal point, surrounded by subtle graphic elements or abstract shapes to add visual interest.",
+    "mood_atmosphere": "Luxurious, elegant, and imaginative, blending realism with artistic abstraction.",
+    "preference_score": "very high"
+  },
+  "artistic_style": "digital_illustration",
+  "background_setting": "A minimalist studio-inspired backdrop, rendered with soft gradients or painterly textures, using light greys and whites to evoke a clean, modern illustration environment.",
+  "context": "Concept art for a luxury fashion campaign, designed for editorial spreads or high-end e-commerce, showcasing the product in a visually striking, digitally painted style.",
+  "lighting": {
+    "conditions": "Soft, diffused lighting with stylized highlights and gentle shadow gradients, mimicking studio effects through digital brushwork.",
+    "direction": "Light sources suggested by painterly strokes, favoring front-top illumination with creative rim lighting.",
+    "shadows": "Soft, artistic shadows rendered with subtle color blending, adding depth and atmosphere without harsh edges."
+  },
+  "objects": [
+    {
+      "appearance_details": "A sleek, illustrated silver clasp or logo, rendered with reflective highlights and subtle linework.",
+      "description": "A modern, stylized leather handbag with clean lines and minimal hardware, depicted with smooth shading and digital texture brushes.",
+      "location": "center",
+      "orientation": "Upright, slightly angled to the left for dynamic composition.",
+      "relationship": "Primary subject, visually anchored on the marble pedestal with enhanced contrast.",
+      "relative_size": "large within frame",
+      "shape_and_color": "Rectangular, deep black with painterly sheen and subtle gradient highlights.",
+      "texture": "Smooth, digitally rendered leather texture with soft gloss effects."
+    },
+    {
+      "appearance_details": "Illustrated marble veining, using soft grey strokes and gentle highlights to suggest natural stone.",
+      "description": "A stylized pedestal, painted in white with abstract grey veins, serving as an elegant base for the handbag.",
+      "location": "bottom-center",
+      "orientation": "Vertical, stable, with artistic perspective.",
+      "relationship": "Supports the handbag, visually grounding the composition.",
+      "relative_size": "medium within frame",
+      "shape_and_color": "Cylindrical, white with digitally rendered grey veins.",
+      "texture": "Smooth, polished marble effect created with soft digital brushes."
+    }
+  ],
+  "photographic_characteristics": {
+    "camera_angle": "Eye-level, with a slightly exaggerated perspective for artistic emphasis.",
+    "depth_of_field": "Shallow, simulated with soft focus and painterly blur to isolate the subject.",
+    "focus": "Sharp digital rendering on handbag details, with expressive highlights and linework.",
+    "lens_focal_length": "Standard illustration perspective (simulating 50mm-85mm), maintaining realistic proportions with creative freedom."
+  },
+  "short_description": "A digitally illustrated studio scene featuring a sleek black handbag on a polished marble pedestal. The composition uses soft gradients, stylized lighting, and painterly textures to create a luxurious, editorial aesthetic.",
+  "style_medium": "digital_illustration"
+}
