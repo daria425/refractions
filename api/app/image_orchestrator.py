@@ -3,7 +3,7 @@ from app.image_gen_client import ImageGenClient, get_image_gen_client
 from app.utils.image_utils import get_image_bytes
 from app.utils.logger import logger
 from app.agent import translate_vision_to_image_prompt
-from app.db.db_collections import ImagesCollection
+from app.db.db_collections import GeneratedImagesCollection
 import json
 import asyncio  # CHANGE: use asyncio primitives for non-blocking waits and concurrency
 from typing import Any, Dict, List  # CHANGE: add typing for clearer contracts and results
@@ -19,7 +19,7 @@ class ImageGenOrchestrator:
         shot_type: str,
         item: Dict[str, str],
         image_gen_client: ImageGenClient,
-        images_collection: ImagesCollection,
+        images_collection: GeneratedImagesCollection,
         semaphore: asyncio.Semaphore,
         wait_time: int,
         per_request_timeout: int,
@@ -70,9 +70,11 @@ class ImageGenOrchestrator:
                 logger.info(f"Generation completed for {shot_type}")
 
                 saved_data = {
-                    "metadata": result_data,
-                    "text_prompt": text_prompt,
-                    "reasoning": reasoning,
+                    "result_data": result_data,
+                    "generation_data":{
+                    "text_prompt":text_prompt, 
+                    "reasoning": reasoning, 
+                    },
                     "shot_type": shot_type,
                 }
 
@@ -120,7 +122,7 @@ class ImageGenOrchestrator:
     async def generate_images(
         self,
         image_gen_client: ImageGenClient,
-        images_collection: ImagesCollection,
+        images_collection: GeneratedImagesCollection,
         wait_time: int,
         max_concurrency: int = 4, 
         per_request_timeout: int = 120, 
@@ -150,7 +152,7 @@ class ImageGenOrchestrator:
     async def run(
         self,
         image_gen_client: ImageGenClient,
-        images_collection: ImagesCollection,
+        images_collection: GeneratedImagesCollection,
         wait_time: int = 0, 
         max_concurrency: int = 4, 
         per_request_timeout: int = 120, 
@@ -169,10 +171,10 @@ class ImageGenOrchestrator:
 # Example usage:
 async def main():
     from app.db.db_connection import DatabaseConnection
-    from app.db.db_collections import ImagesCollection
+    from app.db.db_collections import GeneratedImagesCollection
     db= DatabaseConnection.get_instance()
     db.initialize_mongo_client()
-    images_collection= ImagesCollection()
+    images_collection= GeneratedImagesCollection()
     image_gen_client=get_image_gen_client()
     image_path="./input_images/tech_drawing_sample.png"
     vision="Oriental maximalism, vibrant, gold accents, intricate patterns"

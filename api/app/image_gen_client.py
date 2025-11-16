@@ -88,6 +88,22 @@ class ImageGenClient:
         request_data = await self.submit_image_gen_request(request_payload)
         request_id = request_data["request_id"]
         return await self.poll_for_status(request_id)
+    
+    async def refine_prev_image(self, seed:int, structured_prompt:Dict[str, Any], new_prompt:str, **params):
+        if isinstance(structured_prompt, dict):
+            sp_string = json.dumps(structured_prompt)
+        else:
+            sp_string = structured_prompt
+        request_payload = {"structured_prompt": sp_string,
+                           "visual_output_content_moderation": False, 
+                           "seed": seed, 
+                           "prompt": new_prompt
+                           }
+        request_payload.update(params)
+        request_data = await self.submit_image_gen_request(request_payload)
+        request_id = request_data["request_id"]
+        return await self.poll_for_status(request_id)
+
 
 
     async def poll_for_status(self, request_id: str, interval: int = 2, timeout: int = 300) -> Dict[str, Any]:
@@ -131,7 +147,7 @@ class ImageGenClient:
                     url = result.get("image_url")
                     seed = result.get("seed")
                     structured_prompt = result.get("structured_prompt")
-                    saved_path = download_image_from_url(url, save_to="file")  # TO-DO: sync I/O; can offload if needed
+                    saved_path = download_image_from_url(url, save_to="gcs")  
                     return {
                         "image_url": url,
                         "seed": seed,
@@ -156,57 +172,3 @@ class ImageGenClient:
 @lru_cache(maxsize=1)
 def get_image_gen_client(auth:Dict[str, str]={"api_token": BRIA_API_TOKEN}, base_url: str = DEFAULT_BASE_URL) -> ImageGenClient:
     return ImageGenClient(auth=auth, base_url=base_url)
-# Example usage:
-# async def main():
-#     from app.utils.image_utils import get_image_bytes
-#     from app.agent import translate_vision_to_image_prompt
-#     from app.db.db_connection import DatabaseConnection
-#     from app.db.db_collections import ImagesCollection
-#     import json
-#     db= DatabaseConnection.get_instance()
-#     db.initialize_mongo_client()
-#     images_collection= ImagesCollection()
-#     import time
-#     url = "https://engine.prod.bria-api.com/v2/image/generate"
-#     client = ImageGenClient(
-#         auth={"api_token": BRIA_API_TOKEN},
-#         base_url=url
-#     )
-#     image_path="./input_images/tech_drawing_sample.png"
-#     vision="Minimal luxury"
-#     image_bytes= get_image_bytes(image_path)
-#     prompts= translate_vision_to_image_prompt(vision, image_bytes)
-#     processed_prompts=prompts.response.model_dump()
-
-#     for k, v in processed_prompts.items():
-#         text_prompt=v["prompt"]
-#         reasoning=v["reasoning"]
-#         logger.info(f"Generating image for {k} with prompt: {text_prompt}")
-#         try:
-#             result_data= await client.create_image_from_text(
-#                 text_prompt=text_prompt,
-#                 model_version="FIBO"
-#             )
-#             if isinstance(result_data, dict) and "error" in result_data:
-#                 # CHANGE: handle error return without raising to allow loop to continue
-#                 logger.error(f"Generation error for {k}: {result_data['error']}")
-#                 continue
-#             sp_dict=json.loads(result_data.get("structured_prompt", "{}"))
-#             result_data["structured_prompt"]=sp_dict
-#             logger.info(f"Generation completed! Result: {result_data}")
-#             saved_data={
-#                "metadata": result_data,
-#                "text_prompt": text_prompt,
-#                 "reasoning": reasoning, 
-#                 "shot_type": k
-#             }
-#             images_collection.insert_data(saved_data)
-#             await asyncio.sleep(2)  # CHANGE: avoid blocking the event loop in async context
-#         except Exception as e:
-#             logger.error(f"Generation failed: {e}")
-#             raise
-
-
-# if __name__ == "__main__":
-#     # Run the async example
-#     asyncio.run(main())

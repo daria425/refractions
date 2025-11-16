@@ -25,7 +25,7 @@ class DatabaseCollection:
         return result.inserted_id
 
 
-class ImagesCollection(DatabaseCollection):
+class GeneratedImagesCollection(DatabaseCollection):
     def __init__(self):
-        super().__init__("images")
+        super().__init__("generated_images")
 
