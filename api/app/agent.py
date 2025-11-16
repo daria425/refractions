@@ -1,7 +1,7 @@
 from app.utils.utils_lib import format_prompt
 from app.utils.image_utils import create_image_input
 from google.genai import types
-from app.genai_client import google_client
+from app.services.genai_client import google_client
 from app.utils.response_handlers import handle_llm_response, ResponseSuccess
 from pydantic import BaseModel
 from app.utils.decorators import retry_on_failure

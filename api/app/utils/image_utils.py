@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 import os
 import base64
 from app.utils.logger import logger
-from app.storage_service import upload_image_to_gcs
-from app.genai_client import google_client
+from app.services.storage_service import upload_image_to_gcs
+from app.services.genai_client import google_client
 from google.genai import types
 import io
 def download_image_from_url(url: str, save_to: Optional[Literal["file", "gcs"]]="file", dir_name:str="generated_images") -> str:
