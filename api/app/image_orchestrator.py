@@ -6,14 +6,98 @@ from app.agent import translate_vision_to_image_prompt
 from app.db.db_collections import GeneratedImagesCollection
 import json
 import asyncio  # CHANGE: use asyncio primitives for non-blocking waits and concurrency
-from typing import Any, Dict, List  # CHANGE: add typing for clearer contracts and results
+from typing import Any, Dict, List, Literal, Optional # CHANGE: add typing for clearer contracts and results
 class ImageGenOrchestrator:
-    def __init__(self, vision: str, image_path: str, ):
+    def __init__(self, vision: Optional[str]=None, image_path: Optional[str]=None):
         self.image_path = image_path
         self.vision = vision
         self.prompts={}
         self.image_bytes=None
         self.variants={}
+
+
+    async def refine_one(
+        self,
+        seed: str, # prev image seed
+        structured_prompt: Dict[str, Any], # prev structured prompt
+        request_id: str,
+        variant_item: Dict[str, str],
+        image_gen_client: ImageGenClient,
+
+        images_collection: GeneratedImagesCollection,
+        semaphore: asyncio.Semaphore,
+        wait_time: int,
+        per_request_timeout: int,
+    ):
+        new_prompt=variant_item.get("description")
+        label=variant_item.get("variant_label", "unknown_variant")
+        logger.info(
+            f"Refining image for variant '{label}' with prompt: {new_prompt[:200]}"
+        )
+        async with semaphore:
+            try:
+                refined_result=await asyncio.wait_for(
+                    image_gen_client.refine_prev_image(seed=seed, structured_prompt=structured_prompt, new_prompt=new_prompt), 
+                    timeout=per_request_timeout
+                )
+
+                if isinstance(refined_result, dict) and "error" in refined_result:
+                    logger.error(f"Client returned error for {label}: {refined_result['error']}")
+                    return {"label": label, "status": "error", "error": refined_result["error"]}
+
+                sp_field = refined_result.get("structured_prompt")
+                if isinstance(sp_field, str):
+                    try:
+                        refined_result["structured_prompt"] = json.loads(sp_field)
+                    except json.JSONDecodeError:
+                        logger.warning(
+                            f"structured_prompt not valid JSON for {label}; leaving as string"
+                        )  # CHANGE
+
+                logger.info(f"Generation completed for {label}")
+
+                # CHANGE: build saved_data envelope for variant refinement traceability
+                saved_data = {
+                    "variant_label": label,
+                    "refinement_data": {
+                        "previous_seed": seed,
+                        "previous_structured_prompt": structured_prompt,
+                        "new_prompt": new_prompt,
+                    },
+                    "result_data": refined_result,
+                }
+
+                try:
+                    images_collection.update_image_with_variant(request_id, saved_data) 
+                except Exception as db_err:
+                    logger.error(f"DB update failed for variant {label}: {db_err}")
+                    return {
+                        "label": label,
+                        "status": "error",
+                        "error": {"type": "db_error", "message": str(db_err)},
+                    }
+
+                if wait_time:
+                    await asyncio.sleep(wait_time)  # optional pacing between variants
+
+                return {"label": label, "status": "ok", "data": refined_result}
+
+            except asyncio.TimeoutError:
+                logger.error(f"Timeout refining variant {label}: exceeded {per_request_timeout}s")  # CHANGE
+                return {
+                    "label": label,
+                    "status": "error",
+                    "error": {"type": "timeout", "message": f"did not complete within {per_request_timeout}s"},
+                }
+            except Exception as e:
+                logger.error(f"Unhandled error refining variant {label}: {e}")  # CHANGE
+                return {
+                    "label": label,
+                    "status": "error",
+                    "error": {"type": "unhandled", "message": str(e)},
+                }
+
+
 
     async def generate_one(
         self,
@@ -133,6 +217,38 @@ class ImageGenOrchestrator:
         }
         self.variants = variants
 
+    async def create_variants(
+        self,
+        image_gen_client: ImageGenClient,
+        images_collection: GeneratedImagesCollection,
+        seed: str,
+        request_id: str,
+        structured_prompt: Dict[str, Any],
+        selected_variant_label:str, # just one for now
+        wait_time: int,
+        max_concurrency: int = 4, 
+        per_request_timeout: int = 120,   
+    ):
+        selected_variant_list= self.variants.get(selected_variant_label, [])
+        semaphore = asyncio.Semaphore(max_concurrency)
+        tasks: List[asyncio.Task] = [
+            asyncio.create_task(
+                self.refine_one(
+                seed=seed,
+                structured_prompt=structured_prompt,
+                request_id=request_id,
+                variant_item=v, 
+                image_gen_client=image_gen_client,
+                images_collection=images_collection,
+                semaphore=semaphore,
+                wait_time=wait_time,
+                per_request_timeout=per_request_timeout,
+                )
+            )
+            for v in selected_variant_list
+        ]
+        return await asyncio.gather(*tasks)
+        
 
     async def generate_images(
         self,
@@ -163,8 +279,33 @@ class ImageGenOrchestrator:
         ]
 
         return await asyncio.gather(*tasks)  # CHANGE: tasks return dicts; no exceptions bubble here
+    
+    async def run_variant_gen(
+        self,
+        image_gen_client: ImageGenClient,
+        images_collection: GeneratedImagesCollection,
+        seed: str,
+        request_id: str,
+        structured_prompt: Dict[str, Any],
+        selected_variant_label:str, # just one for now
+        wait_time: int,
+        max_concurrency: int = 4, 
+        per_request_timeout: int = 120,        
+    ):
+        self.get_variants()
+        return await self.create_variants(
+            image_gen_client=image_gen_client,
+            images_collection=images_collection,
+            seed=seed,
+            request_id=request_id,
+            structured_prompt=structured_prompt,
+            selected_variant_label=selected_variant_label,
+            wait_time=wait_time,
+            max_concurrency=max_concurrency,
+            per_request_timeout=per_request_timeout,
+        )
 
-    async def run(
+    async def run_initial_gen(
         self,
         image_gen_client: ImageGenClient,
         images_collection: GeneratedImagesCollection,
@@ -191,19 +332,24 @@ async def main():
     db.initialize_mongo_client()
     images_collection= GeneratedImagesCollection()
     image_gen_client=get_image_gen_client()
-    image_path="./input_images/tech_drawing_sample.png"
-    vision="Oriental maximalism, vibrant, gold accents, intricate patterns"
-    orchestrator= ImageGenOrchestrator(vision, image_path)
-    result= await orchestrator.run(
+    request_id="30f43b96e0f64fcbac3b51c682a1cc74"
+    img=images_collection.get_image_by_request_id(request_id)
+    seed=img["result_data"]["seed"]
+    structured_prompt= img["result_data"]["structured_prompt"]
+    orch= ImageGenOrchestrator()
+    await orch.run_variant_gen(
         image_gen_client=image_gen_client,
-        images_collection=images_collection)
-    return result
+        images_collection=images_collection,
+        seed=seed,
+        request_id=request_id,
+        structured_prompt=structured_prompt,
+        selected_variant_label="lighting",
+        wait_time=2,
+    )
+
 
 if __name__ == "__main__":
     res=asyncio.run(main())
     print(res)
-
-
-    
 
 

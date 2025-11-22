@@ -37,7 +37,17 @@ class GeneratedImagesCollection(DatabaseCollection):
 
     def get_image_by_request_id(self, request_id: str) -> Optional[Dict]:
         """Retrieve an image document by its request_id."""
-        return self.get_data_by_query({"request_id": request_id})
+        return self.get_data_by_query({"result_data.request_id": request_id})
+    
+    def update_image_with_variant(self, request_id:str, variant_data:Dict) -> Optional[Dict]:
+        """Update an image document by adding a new variant."""
+        updated_document = self.collection.find_one_and_update(
+            {"result_data.request_id": request_id},
+            {"$push": {"variants": variant_data}},
+            return_document=ReturnDocument.AFTER
+        )
+        logger.info(f"Updated document with request_id: {request_id} by adding new variant.")
+        return updated_document
 
     
 

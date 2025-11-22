@@ -1,7 +1,7 @@
 import httpx
 import asyncio
 import json
-from typing import Any, Dict, Union
+from typing import Any, Dict, Union, Optional
 from functools import lru_cache
 import os
 from dotenv import load_dotenv
