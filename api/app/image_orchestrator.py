@@ -13,6 +13,7 @@ class ImageGenOrchestrator:
         self.vision = vision
         self.prompts={}
         self.image_bytes=None
+        self.variants={}
 
     async def generate_one(
         self,
@@ -118,6 +119,20 @@ class ImageGenOrchestrator:
         if not isinstance(self.prompts, dict) or not self.prompts:
             logger.error("No prompts returned from translation step; skipping generation") 
             self.prompts = {}
+
+    def get_variants(self):
+        # CHANGE: convert variant strings to dicts with variant_label and description for better semantics
+        variants = {
+            "lighting": [
+                {"variant_label": "softbox_even", "description": "Large softbox, minimal shadows, gentle wrap, even illumination"},
+                {"variant_label": "strong_directional", "description": "Strong directional light from behind or side, crisp shadows, dramatic rim highlights"},
+                {"variant_label": "backlit_glow", "description": "Light source behind product, glowing edges, caustics/refractions for glass/liquid."},
+                {"variant_label": "low_angle_sunset", "description": "Low-angle, warm color temperature, long soft shadows, sunset vibe"},
+                {"variant_label": "blue_window", "description": "Blue-toned, shadowless, natural window light, neutral/cool palette"},
+            ]
+        }
+        self.variants = variants
+
 
     async def generate_images(
         self,

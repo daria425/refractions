@@ -23,9 +23,21 @@ class DatabaseCollection:
         result = self.collection.insert_one(data)
         logger.info(f"Inserted document with ID: {result.inserted_id} into collection {self.collection.name}")
         return result.inserted_id
+    
+    def get_data_by_query(self, query: Dict) -> Optional[Dict]:
+        """Retrieve a single document matching the query."""
+        result = self.collection.find_one(query)
+        logger.info(f"Queried document with {query} from collection {self.collection.name}")
+        return result
 
 
 class GeneratedImagesCollection(DatabaseCollection):
     def __init__(self):
         super().__init__("generated_images")
+
+    def get_image_by_request_id(self, request_id: str) -> Optional[Dict]:
+        """Retrieve an image document by its request_id."""
+        return self.get_data_by_query({"request_id": request_id})
+
+    
 
