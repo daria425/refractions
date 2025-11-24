@@ -159,15 +159,17 @@ async def encode_image_to_base64(source: Union[str, Path]) -> str:
         raise
 
 # TO-DO: refactor to class wheni get bored
-def get_image_bytes(image_path: str) -> str:
+def get_image_bytes(image_data: Union[str, bytes]) -> str:
     """
     Load image bytes from a local file path or URL.
     """
-    if image_path.startswith("http://") or image_path.startswith("https://"):
-        img_bytes = httpx.get(image_path).content
+    if isinstance(image_data, bytes):
+        return image_data
+    if image_data.startswith("http://") or image_data.startswith("https://"):
+        img_bytes = httpx.get(image_data).content
         return img_bytes
     else:
-        with open(image_path, "rb") as img_file:
+        with open(image_data, "rb") as img_file:
             img_bytes = img_file.read()
         return img_bytes
 

@@ -6,10 +6,10 @@ from app.agent import translate_vision_to_image_prompt
 from app.db.db_collections import GeneratedImagesCollection
 import json
 import asyncio  # CHANGE: use asyncio primitives for non-blocking waits and concurrency
-from typing import Any, Dict, List, Literal, Optional # CHANGE: add typing for clearer contracts and results
+from typing import Any, Dict, List, Literal, Optional, Union # CHANGE: add typing for clearer contracts and results
 class ImageGenOrchestrator:
-    def __init__(self, vision: Optional[str]=None, image_path: Optional[str]=None):
-        self.image_path = image_path
+    def __init__(self, vision: Optional[str]=None, uploaded_image: Optional[Union[str, bytes]]=None):
+        self.uploaded_image = uploaded_image
         self.vision = vision
         self.prompts={}
         self.image_bytes=None
@@ -193,8 +193,8 @@ class ImageGenOrchestrator:
                 }
 
     def setup(self):
-        self.image_bytes= get_image_bytes(self.image_path)
-        logger.info(f"Loaded image bytes from {self.image_path}")
+        self.image_bytes= get_image_bytes(self.uploaded_image)
+        logger.info(f"Loaded image bytes from {self.uploaded_image}")
 
 
     def get_prompts(self):
@@ -348,6 +348,20 @@ async def main():
     )
 
 
+async def main():
+    from app.db.db_connection import DatabaseConnection
+    from app.db.db_collections import GeneratedImagesCollection
+    db= DatabaseConnection.get_instance()
+    db.initialize_mongo_client()
+    images_collection= GeneratedImagesCollection()
+    image_gen_client=get_image_gen_client()
+    image_path="./input_images/tech_drawing_sample.png"
+    vision="Oriental maximalism, vibrant, gold accents, intricate patterns"
+    orchestrator= ImageGenOrchestrator(vision, image_path)
+    result= await orchestrator.run(
+        image_gen_client=image_gen_client,
+        images_collection=images_collection)
+    return result
 if __name__ == "__main__":
     res=asyncio.run(main())
     print(res)

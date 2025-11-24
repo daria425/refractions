@@ -1,5 +1,31 @@
-from fastapi import FastAPI
-app = FastAPI()
+from fastapi import FastAPI, Depends, UploadFile, File, Form, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from app.db.db_collections import GeneratedImagesCollection
+from app.image_orchestrator import ImageGenOrchestrator
+from app.image_gen_client import get_image_gen_client
+from app.db.db_connection import DatabaseConnection
+from app.utils.logger import logger
+
+
+def lifespan(app: FastAPI):
+    db_connection = DatabaseConnection.get_instance()
+    db_connection.initialize_mongo_client()
+    yield
+    db_connection.close_connection()
+
+app = FastAPI(lifespan=lifespan)
+
+origins = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def root():
@@ -8,3 +34,57 @@ def root():
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
+@app.post("/generate")
+async def generate_initial_image(
+    vision: str = Form(...), 
+    image_file: UploadFile = File(...),
+    images_collection: GeneratedImagesCollection = Depends(GeneratedImagesCollection)
+):
+    """Generate initial campaign images from CAD design + vision."""
+    # CHANGE: validate inputs early
+    if not vision.strip():
+        raise HTTPException(status_code=400, detail="Vision text cannot be empty")
+    
+    if not image_file.content_type or not image_file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Uploaded file must be an image")
+    
+    try:
+        image_bytes = await image_file.read()
+        
+        if len(image_bytes) == 0:
+            raise HTTPException(status_code=400, detail="Uploaded image is empty")
+        
+        orchestrator = ImageGenOrchestrator(vision=vision, uploaded_image=image_bytes)
+        image_gen_client = get_image_gen_client()
+        
+ 
+        results = await orchestrator.run_initial_gen(
+            image_gen_client=image_gen_client,
+            images_collection=images_collection,
+            wait_time=0,
+            max_concurrency=4,
+            per_request_timeout=120
+        )
+        
+        successes = [r for r in results if r.get("status") == "ok"]
+        failures = [r for r in results if r.get("status") == "error"]
+        
+        return {
+            "status": "completed",
+            "total": len(results),
+            "successful": len(successes),
+            "failed": len(failures),
+            "results": results,
+            "message": f"Generated {len(successes)}/{len(results)} shots successfully"
+        }
+        
+    except HTTPException:
+        raise  #
+    except Exception as e:
+        logger.error(f"Generation failed: {e}") 
+        raise HTTPException(
+            status_code=500,
+            detail=f"Image generation failed: {str(e)}"
+        )
+    
