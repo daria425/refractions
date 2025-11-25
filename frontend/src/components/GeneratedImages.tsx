@@ -1,23 +1,9 @@
 import { useState } from "react";
-
-interface ImageResult {
-  shot_type: string;
-  status: string;
-  data?: {
-    image_url: string;
-    seed?: number;
-    structured_prompt?: any;
-  };
-  error?: any;
-}
-
-interface GeneratedImagesProps {
-  results: ImageResult[];
-}
-
-export default function GeneratedImages({ results }: GeneratedImagesProps) {
+import { useNavigate } from "react-router";
+import type { GeneratedImagesResults } from "../types";
+export default function GeneratedImages({ results }: GeneratedImagesResults) {
   const [currentIndex, setCurrentIndex] = useState(0);
-
+  const nav = useNavigate();
   // Filter only successful results with image URLs
   const successfulImages = results.filter(
     (r) => r.status === "ok" && r.data?.image_url
@@ -54,16 +40,8 @@ export default function GeneratedImages({ results }: GeneratedImagesProps) {
           <img
             src={currentImage.data!.image_url}
             alt={`${currentImage.shot_type} shot`}
-            className="w-full h-full object-contain"
+            className="w-full h-full object-contain relative"
           />
-
-          {/* Shot Type Badge */}
-          <div className="absolute top-4 left-4 px-4 py-2 bg-gradient-to-r from-purple-600/90 to-pink-600/90 backdrop-blur-sm rounded-lg border border-white/20">
-            <p className="text-white font-semibold capitalize">
-              {currentImage.shot_type}
-            </p>
-          </div>
-
           {/* Navigation Arrows */}
           {successfulImages.length > 1 && (
             <>
@@ -121,7 +99,14 @@ export default function GeneratedImages({ results }: GeneratedImagesProps) {
           </div>
         )}
       </div>
-
+      <button
+        onClick={() =>
+          nav(`/edit/${currentImage.data.request_id}`, { state: currentImage })
+        }
+        className="text-white font-semibold px-4 py-2 bg-gradient-to-r from-purple-600/90 to-pink-600/90 backdrop-blur-sm rounded-lg border border-white/20"
+      >
+        Edit
+      </button>
       {/* Thumbnail Navigation */}
       {successfulImages.length > 1 && (
         <div className="flex gap-3 justify-center flex-wrap">
