@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, UploadFile, File, Form, HTTPException, Que
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Literal
 from app.db.db_collections import GeneratedImagesCollection
+from app.models.image_data import ImageEditRequestBody
 from app.image_orchestrator import ImageGenOrchestrator
 from app.image_gen_client import get_image_gen_client
 from app.db.db_connection import DatabaseConnection
@@ -94,3 +95,32 @@ async def generate_initial_image(
             detail=f"Image generation failed: {str(e)}"
         )
     
+
+@app.post("/edit")
+async def edit_endpoint(
+    request_body: ImageEditRequestBody, images_collection: GeneratedImagesCollection=Depends(GeneratedImagesCollection),     method: Literal["from_structured_prompt"] = Query(
+        ..., 
+        description="The image generation method to use",
+        enum=["from_structured_prompt"]  # just the one for now
+    ),
+):
+    try: 
+        orchestrator=ImageGenOrchestrator()
+        image_gen_client=get_image_gen_client()
+        user_structured_prompt=request_body.user_structured_prompt
+        if not user_structured_prompt:
+            raise HTTPException(status_code=400, detail="user_structured_prompt is required for this method")
+        result=await orchestrator.run_json_edit(image_gen_client, 
+                                                images_collection,
+                                                request_id=request_body.request_id, 
+                                                shot_type=request_body.shot_type, 
+                                                user_structured_prompt=request_body.user_structured_prompt)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Generation failed: {e}") 
+        raise HTTPException(
+            status_code=500,
+            detail=f"Image generation failed: {str(e)}"
+        )

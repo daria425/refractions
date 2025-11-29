@@ -12,20 +12,20 @@ const apiClient = axios.create({
   },
 });
 
-function handleEndpoint(endpoint: string) {
-  if (
-    endpoint === "/generate?method=text_to_image" ||
-    endpoint === "/generate"
-  ) {
+const realPost = apiClient.post.bind(apiClient);
+
+function handleEndpoint(endpoint: string, requestBody?: any, config?: any) {
+  if (endpoint === "/generate" || endpoint.startsWith("/generate?")) {
     return { data: initialGenerationResponse };
   }
-  return { data: {} };
+  // dont mock for others
+  return realPost(endpoint, requestBody, config);
 }
 
 async function mockPost(endpoint: string, requestBody?: any, config?: any) {
   console.log("MockClient POST called:", { endpoint, requestBody, config });
   await new Promise((resolve) => setTimeout(resolve, 2000));
-  return handleEndpoint(endpoint);
+  return handleEndpoint(endpoint, requestBody, config);
 }
 
 if (import.meta.env.MODE !== "production") {

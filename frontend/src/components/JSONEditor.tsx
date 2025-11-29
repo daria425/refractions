@@ -8,10 +8,12 @@ export default function JSONEditor({
   structuredPromptJson,
   promptEntries,
   handleEditJson,
+  fetchEditImage,
 }: {
   handleEditJson: (newValue: string) => void;
   structuredPromptJson: string;
   promptEntries: PromptEntry[];
+  fetchEditImage: (editQuery: string) => Promise<void>;
 }) {
   // SUGGESTION: Maintain local component state for:
   // - textareaValue: string (JSON text). Initialize with JSON.stringify(imageData.data.structured_prompt, null, 2)
@@ -77,7 +79,12 @@ export default function JSONEditor({
             <button className="px-3 py-2 rounded-md bg-white/10 text-white hover:bg-white/20 border border-white/20">
               Download JSON
             </button>
-            <button className="px-3 py-2 rounded-md bg-pink-600 text-white hover:bg-pink-700">
+            <button
+              className="px-3 py-2 rounded-md bg-pink-600 text-white hover:bg-pink-700"
+              onClick={() => {
+                fetchEditImage("from_structured_prompt");
+              }}
+            >
               Apply & Regenerate
             </button>
           </div>

@@ -169,7 +169,7 @@ class ImageGenOrchestrator:
                         except json.JSONDecodeError:
                             logger.warning(
                                 f"structured_prompt not valid JSON for {shot_type}; leaving as string"
-                            )  # CHANGE
+                            ) 
 
                     logger.info(f"Generation completed for {shot_type}")
 
@@ -183,7 +183,7 @@ class ImageGenOrchestrator:
                     }
 
                     try:
-                        images_collection.insert_data(saved_data)  # CHANGE: isolate DB failures per shot
+                        images_collection.insert_data(saved_data) 
                     except Exception as db_err:
                         logger.error(f"DB insert failed for {shot_type}: {db_err}")
                         return {
@@ -393,6 +393,8 @@ class ImageGenOrchestrator:
             shot_type=shot_type, # pass from frontend in request
             item=prompt_data, 
             image_gen_client=image_gen_client, 
+            generation_method="structured_prompt", 
+            images_collection=images_collection, 
             semaphore=semaphore, 
             wait_time=wait_time, 
             per_request_timeout=per_request_timeout
