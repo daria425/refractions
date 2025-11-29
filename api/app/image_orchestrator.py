@@ -16,6 +16,7 @@ class ImageGenOrchestrator:
         self.variants={}
 
 
+
     async def refine_one(
         self,
         seed: str, # prev image seed
@@ -98,98 +99,192 @@ class ImageGenOrchestrator:
                 }
 
 
-
+    async def _create_from_text(self, shot_type, text_prompt, image_gen_client, per_request_timeout):
+        result_data = await asyncio.wait_for(
+            image_gen_client.create_image_from_text(
+                text_prompt=text_prompt,
+                model_version="FIBO",
+            ),
+            timeout=per_request_timeout,
+        )
+        return result_data
+    
+    async def _create_from_structured_prompt(self, shot_type, structured_prompt, image_gen_client, per_request_timeout):
+        result_data = await asyncio.wait_for(
+            image_gen_client.create_image_from_structured_prompt(
+                structured_prompt=structured_prompt,
+            ),
+            timeout=per_request_timeout,
+        )
+        return result_data
     async def generate_one(
         self,
         shot_type: str,
-        item: Dict[str, str],
+        item: Dict[str, str], # either data returned from llm so {"prompt": "some prompt", "reasoning": "bla bla"} OR user input like {"user_structured_prompt": {"key": value}}
         image_gen_client: ImageGenClient,
         images_collection: GeneratedImagesCollection,
         semaphore: asyncio.Semaphore,
         wait_time: int,
         per_request_timeout: int,
+        generation_method: Literal["structured_prompt", "text"]
     ) -> Dict[str, Any]:
         """
         Generate a single shot. Do not raise; return an error dict so the batch continues.
         Exception isolation lives here to avoid cancelling sibling tasks.  # CHANGE
         """
-        text_prompt = item.get("prompt", "")
-        reasoning = item.get("reasoning", "")
+        if generation_method == "text":
+            text_prompt = item.get("prompt", "")
+            reasoning = item.get("reasoning", "")
 
-        if not text_prompt:
-            logger.error(f"Skipping shot '{shot_type}': empty prompt")  # CHANGE: soft-fail invalid input
-            return {
-                "shot_type": shot_type,
-                "status": "error",
-                "error": {"type": "input_error", "message": "empty prompt"},
-            }
-
-        logger.info(
-            f"Generating image for {shot_type} with prompt (len={len(text_prompt)}): {text_prompt[:200]}"
-        )
-
-        async with semaphore:
-            try:
-                result_data = await asyncio.wait_for(
-                    image_gen_client.create_image_from_text(
-                        text_prompt=text_prompt,
-                        model_version="FIBO",
-                    ),
-                    timeout=per_request_timeout,
-                )
-
-                if isinstance(result_data, dict) and "error" in result_data:
-                    logger.error(f"Client returned error for {shot_type}: {result_data['error']}")
-                    return {"shot_type": shot_type, "status": "error", "error": result_data["error"]}
-
-                sp_field = result_data.get("structured_prompt")
-                if isinstance(sp_field, str):
-                    try:
-                        result_data["structured_prompt"] = json.loads(sp_field)
-                    except json.JSONDecodeError:
-                        logger.warning(
-                            f"structured_prompt not valid JSON for {shot_type}; leaving as string"
-                        )  # CHANGE
-
-                logger.info(f"Generation completed for {shot_type}")
-
-                saved_data = {
-                    "result_data": result_data,
-                    "generation_data":{
-                    "text_prompt":text_prompt, 
-                    "reasoning": reasoning, 
-                    },
+            if not text_prompt:
+                logger.error(f"Skipping shot '{shot_type}': empty prompt")  # CHANGE: soft-fail invalid input
+                return {
                     "shot_type": shot_type,
+                    "status": "error",
+                    "error": {"type": "input_error", "message": "empty prompt"},
                 }
 
+            logger.info(
+                f"Generating image for {shot_type} with prompt (len={len(text_prompt)}): {text_prompt[:200]}"
+            )
+
+            async with semaphore:
                 try:
-                    images_collection.insert_data(saved_data)  # CHANGE: isolate DB failures per shot
-                except Exception as db_err:
-                    logger.error(f"DB insert failed for {shot_type}: {db_err}")
+                    result_data = await asyncio.wait_for(
+                        image_gen_client.create_image_from_text(
+                            text_prompt=text_prompt,
+                            model_version="FIBO",
+                        ),
+                        timeout=per_request_timeout,
+                    )
+
+                    if isinstance(result_data, dict) and "error" in result_data:
+                        logger.error(f"Client returned error for {shot_type}: {result_data['error']}")
+                        return {"shot_type": shot_type, "status": "error", "error": result_data["error"]}
+
+                    sp_field = result_data.get("structured_prompt")
+                    if isinstance(sp_field, str):
+                        try:
+                            result_data["structured_prompt"] = json.loads(sp_field)
+                        except json.JSONDecodeError:
+                            logger.warning(
+                                f"structured_prompt not valid JSON for {shot_type}; leaving as string"
+                            )  # CHANGE
+
+                    logger.info(f"Generation completed for {shot_type}")
+
+                    saved_data = {
+                        "result_data": result_data,
+                        "generation_data":{
+                        "text_prompt":text_prompt, 
+                        "reasoning": reasoning, 
+                        },
+                        "shot_type": shot_type,
+                    }
+
+                    try:
+                        images_collection.insert_data(saved_data)  # CHANGE: isolate DB failures per shot
+                    except Exception as db_err:
+                        logger.error(f"DB insert failed for {shot_type}: {db_err}")
+                        return {
+                            "shot_type": shot_type,
+                            "status": "error",
+                            "error": {"type": "db_error", "message": str(db_err)},
+                        }
+
+                    if wait_time:
+                        await asyncio.sleep(wait_time)  # optional pacing
+                    return {"shot_type": shot_type, "status": "ok", "data": result_data}
+
+                except asyncio.TimeoutError:
+                    logger.error(f"Timeout for {shot_type}: exceeded {per_request_timeout}s")  # CHANGE
                     return {
                         "shot_type": shot_type,
                         "status": "error",
-                        "error": {"type": "db_error", "message": str(db_err)},
+                        "error": {"type": "timeout", "message": f"did not complete within {per_request_timeout}s"},
+                    }
+                except Exception as e:
+                    logger.error(f"Unhandled error for {shot_type}: {e}")
+                    return {
+                        "shot_type": shot_type,
+                        "status": "error",
+                        "error": {"type": "unhandled", "message": str(e)},
+                    }
+        else:
+            # oh god we need to make this prettier but okay not rn
+            user_structured_prompt = item.get("structured_prompt") or item.get("user_structured_prompt")
+            if not user_structured_prompt:
+                logger.error(f"Skipping shot '{shot_type}': missing structured_prompt for generation_method=structured_prompt")
+                return {
+                    "shot_type": shot_type,
+                    "status": "error",
+                    "error": {"type": "input_error", "message": "missing structured_prompt"},
+                }
+
+            logger.info(f"Generating image for {shot_type} from structured_prompt")
+
+            async with semaphore:
+                try:
+                    result_data = await asyncio.wait_for(
+                        image_gen_client.create_image_from_structured_prompt(
+                            structured_prompt=user_structured_prompt,
+                            model_version="FIBO",
+                        ),
+                        timeout=per_request_timeout,
+                    )
+
+                    if isinstance(result_data, dict) and "error" in result_data:
+                        logger.error(f"Client returned error for {shot_type}: {result_data['error']}")
+                        return {"shot_type": shot_type, "status": "error", "error": result_data["error"]}
+
+                    sp_field = result_data.get("structured_prompt")
+                    if isinstance(sp_field, str):
+                        try:
+                            result_data["structured_prompt"] = json.loads(sp_field)
+                        except json.JSONDecodeError:
+                            logger.warning(
+                                f"structured_prompt not valid JSON for {shot_type}; leaving as string"
+                            )  # CHANGE
+
+                    logger.info(f"Generation completed for {shot_type}")
+
+                    saved_data = {
+                        "result_data": result_data,
+                        "generation_data": {
+                            "structured_prompt": user_structured_prompt,
+                            "source": "json_edit",
+                        },
+                        "shot_type": shot_type,
                     }
 
-                if wait_time:
-                    await asyncio.sleep(wait_time)  # optional pacing
-                return {"shot_type": shot_type, "status": "ok", "data": result_data}
+                    try:
+                        images_collection.insert_data(saved_data)
+                    except Exception as db_err:
+                        logger.error(f"DB insert failed for {shot_type}: {db_err}")
+                        return {
+                            "shot_type": shot_type,
+                            "status": "error",
+                            "error": {"type": "db_error", "message": str(db_err)},
+                        }
 
-            except asyncio.TimeoutError:
-                logger.error(f"Timeout for {shot_type}: exceeded {per_request_timeout}s")  # CHANGE
-                return {
-                    "shot_type": shot_type,
-                    "status": "error",
-                    "error": {"type": "timeout", "message": f"did not complete within {per_request_timeout}s"},
-                }
-            except Exception as e:
-                logger.error(f"Unhandled error for {shot_type}: {e}")
-                return {
-                    "shot_type": shot_type,
-                    "status": "error",
-                    "error": {"type": "unhandled", "message": str(e)},
-                }
+                    if wait_time:
+                        await asyncio.sleep(wait_time)
+                    return {"shot_type": shot_type, "status": "ok", "data": result_data}
+
+                except asyncio.TimeoutError:
+                    logger.error(f"Timeout for {shot_type}: exceeded {per_request_timeout}s")
+                    return {
+                        "shot_type": shot_type,
+                        "status": "error",
+                        "error": {"type": "timeout", "message": f"did not complete within {per_request_timeout}s"},
+                    }
+                except Exception as e:
+                    logger.error(f"Unhandled error for {shot_type}: {e}")
+                    return {
+                        "shot_type": shot_type,
+                        "status": "error",
+                        "error": {"type": "unhandled", "message": str(e)},
+                    }
 
     def setup(self):
         self.image_bytes= get_image_bytes(self.uploaded_image)
@@ -272,12 +367,40 @@ class ImageGenOrchestrator:
                     semaphore=semaphore,
                     wait_time=wait_time,
                     per_request_timeout=per_request_timeout,
+                    generation_method="text"
                 )
             )
             for k, v in self.prompts.items()
         ]
 
         return await asyncio.gather(*tasks)  # CHANGE: tasks return dicts; no exceptions bubble here
+    
+    async def run_json_edit(
+            self, 
+            image_gen_client: ImageGenClient, 
+            images_collection: GeneratedImagesCollection, 
+            request_id: str, # to store, 
+            shot_type: str,
+            user_structured_prompt: Dict[str, Any], 
+            wait_time: int = 0, # top level functions so add defaults here
+            per_request_timeout: int = 120, 
+    ): 
+        semaphore=asyncio.Semaphore(1) # just one bc we are just running once
+        prompt_data={
+            "user_structured_prompt": user_structured_prompt
+        }
+        result=await self.generate_one(
+            shot_type=shot_type, # pass from frontend in request
+            item=prompt_data, 
+            image_gen_client=image_gen_client, 
+            semaphore=semaphore, 
+            wait_time=wait_time, 
+            per_request_timeout=per_request_timeout
+        )
+        
+        # some storage with request_id
+        return result
+        
     
     async def run_variant_gen(
         self,
