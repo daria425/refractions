@@ -6,13 +6,19 @@ import { useState } from "react";
 export default function ImageEditor() {
   const location = useLocation();
   const imageData = location.state as ImageResult;
-  console.log("Editing image data:", imageData);
   const [editorState, setEditorState] = useState<EditorState>({
     activeEditor: null,
   });
   const promptEntries = flattenStructuredPrompt(
     imageData.data.structured_prompt
   );
+  const [textAreaJSON, setTextAreaJSON] = useState(
+    JSON.stringify(imageData.data.structured_prompt, null, 2)
+  );
+
+  const handleEditJson = (newValue: string) => {
+    setTextAreaJSON(newValue);
+  };
   function handleOpenJSONEditor(editorContent: Record<string, any>) {
     setEditorState({
       activeEditor: "json",
@@ -38,7 +44,11 @@ export default function ImageEditor() {
           </button>
         </div>
       </div>
-      <JSONEditor imageData={imageData} />
+      <JSONEditor
+        structuredPromptJson={textAreaJSON}
+        promptEntries={promptEntries}
+        handleEditJson={handleEditJson}
+      />
     </div>
   );
 }

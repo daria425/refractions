@@ -13,7 +13,10 @@ const apiClient = axios.create({
 });
 
 function handleEndpoint(endpoint: string) {
-  if (endpoint === "/generate") {
+  if (
+    endpoint === "/generate?method=text_to_image" ||
+    endpoint === "/generate"
+  ) {
     return { data: initialGenerationResponse };
   }
   return { data: {} };

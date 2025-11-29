@@ -62,9 +62,10 @@ export default function Main() {
     });
 
     try {
+      // # CHANGE: Added query param ?method=text_to_image to the POST URL
       const response = await apiClient.post<{
         data: GenerationSuccessResponse;
-      }>("/generate", formData, {
+      }>("/generate?method=text_to_image", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },

@@ -63,7 +63,8 @@ async def generate_initial_image(
         orchestrator = ImageGenOrchestrator(vision=vision, uploaded_image=image_bytes)
         image_gen_client = get_image_gen_client()
         
- 
+        if method != "text_to_image":
+            raise HTTPException(status_code=400, detail=f"Unsupported generation method: {method}") # i dont have that yet :(
         results = await orchestrator.run_initial_gen(
             image_gen_client=image_gen_client,
             images_collection=images_collection,
