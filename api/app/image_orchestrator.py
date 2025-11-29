@@ -130,7 +130,6 @@ class ImageGenOrchestrator:
 
         async with semaphore:
             try:
-                # CHANGE: Bound the request to prevent hanging workers
                 result_data = await asyncio.wait_for(
                     image_gen_client.create_image_from_text(
                         text_prompt=text_prompt,

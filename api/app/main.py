@@ -1,5 +1,6 @@
-from fastapi import FastAPI, Depends, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, Depends, UploadFile, File, Form, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from typing import Literal
 from app.db.db_collections import GeneratedImagesCollection
 from app.image_orchestrator import ImageGenOrchestrator
 from app.image_gen_client import get_image_gen_client
@@ -34,9 +35,13 @@ def root():
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
-
 @app.post("/generate")
 async def generate_initial_image(
+    method: Literal["structured_prompt_to_image", "image_to_image", "text_to_image"] = Query(
+        ..., 
+        description="The image generation method to use",
+        enum=["structured_prompt_to_image", "image_to_image", "text_to_image"]  # initial gen runs with text to image because that is the method under the hood
+    ),
     vision: str = Form(...), 
     image_file: UploadFile = File(...),
     images_collection: GeneratedImagesCollection = Depends(GeneratedImagesCollection)

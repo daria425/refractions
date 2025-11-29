@@ -18,6 +18,7 @@ export type ImageResult = {
   data: {
     image_url: string;
     seed: number;
+    saved_path: string;
     structured_prompt: any;
     request_id: string;
   };
@@ -32,4 +33,9 @@ export type PromptEntry = {
   label: string;
   value: string;
   path: string;
+};
+
+export type EditorState = {
+  activeEditor: string | null;
+  editorContent?: any;
 };

@@ -121,7 +121,7 @@ export default function GeneratedImages({ results }: GeneratedImagesResults) {
               }`}
             >
               <img
-                src={img.data!.image_url}
+                src={img.data!.saved_path}
                 alt={`${img.shot_type} thumbnail`}
                 className="w-full h-full object-cover"
               />
