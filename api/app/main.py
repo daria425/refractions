@@ -7,6 +7,7 @@ from app.image_orchestrator import ImageGenOrchestrator
 from app.image_gen_client import get_image_gen_client
 from app.db.db_connection import DatabaseConnection
 from app.utils.logger import logger
+from app.routes.schema import router as schema_router
 
 
 def lifespan(app: FastAPI):
@@ -28,6 +29,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Routers
+app.include_router(schema_router)
 
 @app.get("/")
 def root():
@@ -96,9 +100,9 @@ async def generate_initial_image(
         )
     
 
-@app.post("/edit")
+@app.post("/edit/{request_id}")
 async def edit_endpoint(
-    request_body: ImageEditRequestBody, images_collection: GeneratedImagesCollection=Depends(GeneratedImagesCollection),     method: Literal["from_structured_prompt"] = Query(
+    request_body: ImageEditRequestBody, request_id:str, images_collection: GeneratedImagesCollection=Depends(GeneratedImagesCollection),     method: Literal["from_structured_prompt"] = Query(
         ..., 
         description="The image generation method to use",
         enum=["from_structured_prompt"]  # just the one for now
@@ -112,7 +116,7 @@ async def edit_endpoint(
             raise HTTPException(status_code=400, detail="user_structured_prompt is required for this method")
         result=await orchestrator.run_json_edit(image_gen_client, 
                                                 images_collection,
-                                                request_id=request_body.request_id, 
+                                                request_id,  
                                                 shot_type=request_body.shot_type, 
                                                 user_structured_prompt=request_body.user_structured_prompt)
         return result

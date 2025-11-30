@@ -1,9 +1,45 @@
 import { useLocation, useParams } from "react-router";
 import JSONEditor from "./components/JSONEditor";
+import AutoVariantEditor from "./components/AutoVariantEditor";
 import type { ImageResult, EditorState, APIFetchState } from "./types";
 import { flattenStructuredPrompt } from "./utils";
 import { useState } from "react";
+
 import apiClient from "./api/apiClient";
+
+// static so i dont have to mess w the API rn
+const variants = {
+  "version": "v1",
+  "groups": {
+    "lighting": [
+      {
+        "variant_label": "softbox_even",
+        "description":
+          "Large softbox, minimal shadows, gentle wrap, even illumination",
+      },
+      {
+        "variant_label": "strong_directional",
+        "description":
+          "Strong directional light from behind or side, crisp shadows, dramatic rim highlights",
+      },
+      {
+        "variant_label": "backlit_glow",
+        "description":
+          "Light source behind product, glowing edges, caustics/refractions for glass/liquid.",
+      },
+      {
+        "variant_label": "low_angle_sunset",
+        "description":
+          "Low-angle, warm color temperature, long soft shadows, sunset vibe",
+      },
+      {
+        "variant_label": "blue_window",
+        "description":
+          "Blue-toned, shadowless, natural window light, neutral/cool palette",
+      },
+    ],
+  },
+};
 export default function ImageEditor() {
   const location = useLocation();
   const { request_id } = useParams();
@@ -19,6 +55,12 @@ export default function ImageEditor() {
       data: null,
     }
   );
+
+  const [fetchVariantsState, setFetchVariantsState] = useState<APIFetchState>({
+    loading: false,
+    error: null,
+    data: null,
+  });
 
   // # CHANGE: keep a small list of edited image paths to preview
   const [editedImages, setEditedImages] = useState<string[]>([]);
@@ -36,6 +78,11 @@ export default function ImageEditor() {
   function handleOpenJSONEditor() {
     setEditorState({
       activeEditor: "json",
+    });
+  }
+  function handleOpenAutoEditor() {
+    setEditorState({
+      activeEditor: "auto-variants",
     });
   }
   function handleCloseEditor() {
@@ -62,14 +109,13 @@ export default function ImageEditor() {
 
     const requestBody = {
       user_structured_prompt: parsed,
-      request_id,
       shot_type: imageData.shot_type,
     };
     console.log("Will submit request with:", requestBody);
 
     try {
       const response = await apiClient.post(
-        `/edit?method=${editQuery}`,
+        `/edit/${request_id}?method=${editQuery}`,
         requestBody
       );
       console.log("Edit response:", response.data);
@@ -164,7 +210,10 @@ export default function ImageEditor() {
             >
               Advanced JSON Editor
             </button>
-            <button className="py-2 px-4 rounded-lg border border-white/20 bg-purple-100/20 hover:bg-purple-200 text-white">
+            <button
+              onClick={handleOpenAutoEditor}
+              className="py-2 px-4 rounded-lg border border-white/20 bg-purple-100/20 hover:bg-purple-200 text-white"
+            >
               Auto-Edit
             </button>
           </div>
@@ -177,6 +226,9 @@ export default function ImageEditor() {
           handleEditJson={handleEditJson}
           fetchEditImage={fetchEditImage}
         />
+      )}
+      {editorState.activeEditor === "auto-variants" && (
+        <AutoVariantEditor imageVariants={variants} />
       )}
     </div>
   );

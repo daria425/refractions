@@ -27,5 +27,8 @@ class ImageEditRequestBody(BaseModel):
     user_structured_prompt: Optional[Union[Dict[str, Any], str]]=None
     user_text_prompt: Optional[str]=None
     shot_type:str
-    request_id:str
 
+class VariantGenRequestBody(BaseModel):
+    seed:str
+    shot_type: str
+    structured_prompt: Dict[str, Any]

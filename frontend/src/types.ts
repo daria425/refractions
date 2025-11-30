@@ -39,3 +39,16 @@ export type EditorState = {
   activeEditor: string | null;
   editorContent?: any;
 };
+
+export type VariantItem = {
+  variant_label: string;
+  description: string;
+};
+export type ImageVariants = {
+  [key: string]: VariantItem[];
+};
+
+export type VariantSchema = {
+  version?: string;
+  groups: ImageVariants;
+};
