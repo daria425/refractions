@@ -33,10 +33,9 @@ export default function ImageEditor() {
   const handleEditJson = (newValue: string) => {
     setTextAreaJSON(newValue);
   };
-  function handleOpenJSONEditor(editorContent: Record<string, any>) {
+  function handleOpenJSONEditor() {
     setEditorState({
       activeEditor: "json",
-      editorContent,
     });
   }
   function handleCloseEditor() {
@@ -99,9 +98,9 @@ export default function ImageEditor() {
   };
 
   return (
-    <div className="px-8 py-4 flex relative">
-      <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-8 lg:flex border border-white/20 max-w-6xl mx-auto gap-8">
-        <div className="flex flex-col gap-4">
+    <div className="px-8 py-4 2xl:flex relative">
+      <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-8 border border-white/20 max-w-6xl mx-auto gap-8">
+        <div className="flex gap-4">
           <div>
             <div className="text-sm text-white/70 mb-1">Original</div>
             <img
@@ -156,22 +155,29 @@ export default function ImageEditor() {
             </div>
           )}
         </div>
-
-        <div className="flex flex-col gap-2">
-          <button className="py-2 px-4 rounded-lg border border-white/20 bg-purple-100 hover:bg-purple-200">
-            Advanced JSON Editor
-          </button>
-          <button className="py-2 px-4 rounded-lg border border-white/20 bg-purple-100 hover:bg-purple-200">
-            Auto-Edit
-          </button>
+        <div>
+          <h5 className="text-white font-semibold text-lg">Menu</h5>
+          <div className="mt-4">
+            <button
+              className="py-2 px-4 rounded-lg border border-white/20 bg-purple-100/20 hover:bg-purple-200 text-white"
+              onClick={handleOpenJSONEditor}
+            >
+              Advanced JSON Editor
+            </button>
+            <button className="py-2 px-4 rounded-lg border border-white/20 bg-purple-100/20 hover:bg-purple-200 text-white">
+              Auto-Edit
+            </button>
+          </div>
         </div>
       </div>
-      <JSONEditor
-        structuredPromptJson={textAreaJSON}
-        promptEntries={promptEntries}
-        handleEditJson={handleEditJson}
-        fetchEditImage={fetchEditImage}
-      />
+      {editorState.activeEditor === "json" && (
+        <JSONEditor
+          structuredPromptJson={textAreaJSON}
+          promptEntries={promptEntries}
+          handleEditJson={handleEditJson}
+          fetchEditImage={fetchEditImage}
+        />
+      )}
     </div>
   );
 }

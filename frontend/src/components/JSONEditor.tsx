@@ -21,7 +21,7 @@ export default function JSONEditor({
   // You can lift this state to parent if you want to coordinate Apply & Regenerate.
 
   return (
-    <div className="p-8 bg-white/5 rounded-lg border border-white/20">
+    <div className="p-8 bg-white/5 rounded-2xl max-w-6xl mx-auto border border-white/20">
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         <CodeXml className="text-white/80" />
