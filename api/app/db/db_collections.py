@@ -1,4 +1,4 @@
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional, Union, Callable
 from pymongo import ReturnDocument
 from datetime import datetime, timezone, timedelta
 from bson import ObjectId
@@ -16,6 +16,7 @@ class DatabaseCollection:
     def __init__(self, collection_name):
         db_connection = DatabaseConnection.get_instance()
         self.collection = db_connection.get_collection(collection_name)
+
 
     def insert_data(self, data: Dict) -> ObjectId:
         """Insert a document into the collection."""
@@ -48,6 +49,14 @@ class GeneratedImagesCollection(DatabaseCollection):
         )
         logger.info(f"Updated document with request_id: {request_id} by adding new variant.")
         return updated_document
-
+    
+    def update_image_with_edit(self, request_id:str, edited_image_data: Dict)->Optional[Dict]:
+        updated_document = self.collection.find_one_and_update(
+            {"result_data.request_id": request_id},
+            {"$push": {"edits": edited_image_data}},
+            return_document=ReturnDocument.AFTER
+        )
+        logger.info(f"Updated document with request_id: {request_id} by adding new variant.")
+        return updated_document
     
 

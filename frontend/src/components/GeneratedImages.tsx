@@ -38,7 +38,7 @@ export default function GeneratedImages({ results }: GeneratedImagesResults) {
         {/* Main Image Container */}
         <div className="relative aspect-[4/5] bg-white/5 rounded-2xl overflow-hidden border border-white/20">
           <img
-            src={currentImage.data!.image_url}
+            src={currentImage.data!.saved_path}
             alt={`${currentImage.shot_type} shot`}
             className="w-full h-full object-contain relative"
           />
