@@ -8,6 +8,7 @@ from app.image_gen_client import get_image_gen_client
 from app.db.db_connection import DatabaseConnection
 from app.utils.logger import logger
 from app.routes.schema import router as schema_router
+from app.routes.shots import router as shots_router
 
 
 def lifespan(app: FastAPI):
@@ -32,6 +33,7 @@ app.add_middleware(
 
 # Routers
 app.include_router(schema_router)
+app.include_router(shots_router)
 
 @app.get("/")
 def root():

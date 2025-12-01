@@ -4,42 +4,8 @@ import AutoVariantEditor from "./components/AutoVariantEditor";
 import type { ImageResult, EditorState, APIFetchState } from "./types";
 import { flattenStructuredPrompt } from "./utils";
 import { useState } from "react";
-
 import apiClient from "./api/apiClient";
-
-// static so i dont have to mess w the API rn
-const variants = {
-  "version": "v1",
-  "groups": {
-    "lighting": [
-      {
-        "variant_label": "softbox_even",
-        "description":
-          "Large softbox, minimal shadows, gentle wrap, even illumination",
-      },
-      {
-        "variant_label": "strong_directional",
-        "description":
-          "Strong directional light from behind or side, crisp shadows, dramatic rim highlights",
-      },
-      {
-        "variant_label": "backlit_glow",
-        "description":
-          "Light source behind product, glowing edges, caustics/refractions for glass/liquid.",
-      },
-      {
-        "variant_label": "low_angle_sunset",
-        "description":
-          "Low-angle, warm color temperature, long soft shadows, sunset vibe",
-      },
-      {
-        "variant_label": "blue_window",
-        "description":
-          "Blue-toned, shadowless, natural window light, neutral/cool palette",
-      },
-    ],
-  },
-};
+import variants from "./config/variants.json";
 export default function ImageEditor() {
   const location = useLocation();
   const { request_id } = useParams();
@@ -91,8 +57,6 @@ export default function ImageEditor() {
 
   const fetchEditImage = async (editQuery: string) => {
     if (editQuery !== "from_structured_prompt") return;
-
-    // CHANGE: validate JSON before sending
     let parsed: any;
     try {
       parsed = JSON.parse(textAreaJSON);
@@ -124,8 +88,6 @@ export default function ImageEditor() {
         error: null,
         data: response.data,
       });
-
-      // # CHANGE: append edited image path for preview (prefer saved_path, fallback to image_url)
       const newPath =
         response?.data?.data?.saved_path || response?.data?.data?.image_url;
       if (newPath) {
@@ -143,6 +105,34 @@ export default function ImageEditor() {
     }
   };
 
+  const fetchVariants = async (selectedVariantLabel: string) => {
+    const requestBody = {
+      structured_prompt: imageData.data.structured_prompt,
+      shot_type: imageData.shot_type,
+      seed: imageData.data.seed,
+    };
+    console.log("Will submit request with:", requestBody);
+
+    try {
+      const response = await apiClient.post(
+        `/shots/${request_id}/variants/${selectedVariantLabel}`,
+        requestBody
+      );
+      console.log("Variants response:", response.data);
+      setFetchVariantsState({
+        loading: false,
+        error: null,
+        data: response.data,
+      });
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.detail ||
+        err?.message ||
+        "Variant generation failed";
+      console.error("Variant generation failed:", message, err);
+      setFetchVariantsState({ loading: false, error: message, data: null });
+    }
+  };
   return (
     <div className="px-8 py-4 2xl:flex relative">
       <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-8 border border-white/20 max-w-6xl mx-auto gap-8">
@@ -228,7 +218,10 @@ export default function ImageEditor() {
         />
       )}
       {editorState.activeEditor === "auto-variants" && (
-        <AutoVariantEditor imageVariants={variants} />
+        <AutoVariantEditor
+          imageVariants={variants}
+          fetchVariants={fetchVariants}
+        />
       )}
     </div>
   );

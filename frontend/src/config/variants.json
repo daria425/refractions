@@ -1,0 +1,159 @@
+{
+  "version": "v1",
+  "groups": {
+    "lighting": [
+      {
+        "variant_label": "softbox_even",
+        "description": "Large softbox, minimal shadows, gentle wrap, even illumination"
+      },
+      {
+        "variant_label": "strong_directional",
+        "description": "Strong directional light from behind or side, crisp shadows, dramatic rim highlights"
+      },
+      {
+        "variant_label": "backlit_glow",
+        "description": "Light source behind product, glowing edges, caustics/refractions for glass/liquid."
+      },
+      {
+        "variant_label": "low_angle_sunset",
+        "description": "Low-angle, warm color temperature, long soft shadows, sunset vibe"
+      },
+      {
+        "variant_label": "blue_window",
+        "description": "Blue-toned, shadowless, natural window light, neutral/cool palette"
+      }
+    ],
+    "camera": [
+      {
+        "variant_label": "front_elevation",
+        "description": "Straight-on eye-level product view, neutral perspective"
+      },
+      {
+        "variant_label": "low_hero",
+        "description": "Low angle slight upward tilt, emphasizes stature and presence"
+      },
+      {
+        "variant_label": "high_overlook",
+        "description": "High angle looking down, overview of form and surface"
+      },
+      {
+        "variant_label": "three_quarter",
+        "description": "Angled 30–45° view revealing depth and silhouette"
+      },
+      {
+        "variant_label": "macro_detail",
+        "description": "Ultra close crop focusing on fine material or texture"
+      }
+    ],
+    "composition": [
+      {
+        "variant_label": "center_clean",
+        "description": "Centered subject, generous negative space, minimal distractions"
+      },
+      {
+        "variant_label": "rule_of_thirds",
+        "description": "Subject aligned to thirds grid intersection for balanced tension"
+      },
+      {
+        "variant_label": "tight_crop",
+        "description": "Close framing, edges near product boundary, intimate feel"
+      },
+      {
+        "variant_label": "asym_offset",
+        "description": "Off-center placement with counterbalancing empty space"
+      },
+      {
+        "variant_label": "diagonal_flow",
+        "description": "Elements arranged along a diagonal axis for dynamic energy"
+      }
+    ],
+    "surface": [
+      {
+        "variant_label": "matte_plinth",
+        "description": "Neutral matte pedestal, soft shadow falloff"
+      },
+      {
+        "variant_label": "gloss_reflective",
+        "description": "High-gloss surface with crisp mirror reflections"
+      },
+      {
+        "variant_label": "textured_fabric",
+        "description": "Soft woven textile base adding tactile context"
+      },
+      {
+        "variant_label": "natural_wood",
+        "description": "Warm wood grain introducing organic tone"
+      },
+      {
+        "variant_label": "stone_concrete",
+        "description": "Cool mineral surface, subtle speckle pattern"
+      }
+    ],
+    "color_grade": [
+      {
+        "variant_label": "neutral_true",
+        "description": "Balanced white point, faithful product colors"
+      },
+      {
+        "variant_label": "warm_brand",
+        "description": "Warm bias, gentle amber lift preserving brand palette"
+      },
+      {
+        "variant_label": "cool_clean",
+        "description": "Cool shift for clinical, tech, or freshness vibe"
+      },
+      {
+        "variant_label": "high_contrast",
+        "description": "Expanded tonal range, deeper blacks and brighter highlights"
+      },
+      {
+        "variant_label": "soft_desaturated",
+        "description": "Lower saturation, airy tonal compression"
+      }
+    ],
+    "background": [
+      {
+        "variant_label": "pure_iso",
+        "description": "Seamless solid color, no texture, isolated subject"
+      },
+      {
+        "variant_label": "soft_gradient",
+        "description": "Subtle vertical or radial gradient for depth"
+      },
+      {
+        "variant_label": "ambient_shadowplay",
+        "description": "Layered soft shadows adding dimensional interest"
+      },
+      {
+        "variant_label": "organic_props",
+        "description": "Minimal natural elements (leaf, stone) framing product"
+      },
+      {
+        "variant_label": "graphic_shapes",
+        "description": "Clean geometric forms (arcs, blocks) behind subject"
+      }
+    ],
+    "mood": [
+      {
+        "variant_label": "bright_fresh",
+        "description": "High key, airy light, optimistic tone"
+      },
+      {
+        "variant_label": "dramatic_contrast",
+        "description": "Low key pockets of light, strong shadow sculpting"
+      },
+      {
+        "variant_label": "lux_soft",
+        "description": "Diffused glow, gentle transitions, premium feel"
+      },
+      {
+        "variant_label": "cool_minimal",
+        "description": "Sparse frame, cool palette, restrained styling"
+      },
+      {
+        "variant_label": "energetic_pop",
+        "description": "Punchy colors, higher saturation, lively presence"
+      }
+    ]
+  }
+}

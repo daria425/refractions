@@ -6,7 +6,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       style={{
         backgroundColor: "#0c0024",
         background:
-          "linear-gradient(10deg, rgba(12, 0, 36, 1) 0%, rgba(50, 9, 121, 1) 35%, rgba(109, 2, 176, 1) 100%)",
+          "linear-gradient(10deg, rgba(12, 0, 36, 1) 0%, rgba(26, 4, 63, 1) 35%, rgba(51, 1, 81, 1) 100%)",
       }}
     >
       {children}

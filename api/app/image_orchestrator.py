@@ -220,7 +220,6 @@ class ImageGenOrchestrator:
             persist_fn=db_save_fn if db_save_fn else images_collection.insert_data,  # CHANGE: allow per-call persistence
         )
 
-    # ========= Setup / Planning =========
     def setup(self):
         self.image_bytes = get_image_bytes(self.uploaded_image)
         logger.info(f"Loaded image bytes from {self.uploaded_image}")
@@ -235,7 +234,6 @@ class ImageGenOrchestrator:
     def get_variants(self):
         self.variants = get_variants()["groups"]
 
-    # ========= Orchestration =========
     async def create_variants(
         self,
         image_gen_client: ImageGenClient,

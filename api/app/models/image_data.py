@@ -29,6 +29,6 @@ class ImageEditRequestBody(BaseModel):
     shot_type:str
 
 class VariantGenRequestBody(BaseModel):
-    seed:str
+    seed:int
     shot_type: str
     structured_prompt: Dict[str, Any]
