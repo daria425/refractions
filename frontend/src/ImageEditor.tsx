@@ -28,6 +28,9 @@ export default function ImageEditor() {
     data: null,
   });
 
+  const [currentVariantLabel, setCurrentVariantLabel] = useState<string | null>(
+    null
+  );
   // # CHANGE: keep a small list of edited image paths to preview
   const [editedImages, setEditedImages] = useState<string[]>([]);
   const [editedIndex, setEditedIndex] = useState(0);
@@ -112,7 +115,12 @@ export default function ImageEditor() {
       seed: imageData.data.seed,
     };
     console.log("Will submit request with:", requestBody);
-
+    setCurrentVariantLabel(selectedVariantLabel);
+    setFetchVariantsState({
+      loading: true,
+      error: null,
+      data: null,
+    });
     try {
       const response = await apiClient.post(
         `/shots/${request_id}/variants/${selectedVariantLabel}`,
@@ -124,6 +132,7 @@ export default function ImageEditor() {
         error: null,
         data: response.data,
       });
+      setCurrentVariantLabel(null); // we r done
     } catch (err: any) {
       const message =
         err?.response?.data?.detail ||
@@ -131,6 +140,7 @@ export default function ImageEditor() {
         "Variant generation failed";
       console.error("Variant generation failed:", message, err);
       setFetchVariantsState({ loading: false, error: message, data: null });
+      setCurrentVariantLabel(null);
     }
   };
   return (
@@ -219,6 +229,8 @@ export default function ImageEditor() {
       )}
       {editorState.activeEditor === "auto-variants" && (
         <AutoVariantEditor
+          selectedVariantLabel={currentVariantLabel}
+          fetchVariantState={fetchVariantsState}
           imageVariants={variants}
           fetchVariants={fetchVariants}
         />

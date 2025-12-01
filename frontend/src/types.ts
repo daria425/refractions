@@ -25,6 +25,19 @@ export type ImageResult = {
   error?: any;
 };
 
+export type VariantResult = {
+  label: string;
+  status: string;
+  data: {
+    image_url: string;
+    seed: number;
+    saved_path: string;
+    structured_prompt: any;
+    request_id: string;
+  };
+  error: any;
+};
+
 export type GeneratedImagesResults = {
   results: ImageResult[];
 };
