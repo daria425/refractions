@@ -132,7 +132,6 @@ export default function ImageEditor() {
         error: null,
         data: response.data,
       });
-      setCurrentVariantLabel(null); // we r done
     } catch (err: any) {
       const message =
         err?.response?.data?.detail ||

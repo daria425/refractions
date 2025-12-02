@@ -1,9 +1,3 @@
-export type APIFetchState = {
-  loading: boolean;
-  error: string | null;
-  data: any;
-};
-
 export type GenerationSuccessResponse = {
   failed: number;
   total: number;
@@ -12,8 +6,14 @@ export type GenerationSuccessResponse = {
   successful: number;
 };
 
+export type APIFetchState = {
+  loading: boolean;
+  error: string | null;
+  data: GenerationSuccessResponse | null;
+};
 export type ImageResult = {
-  shot_type: string;
+  shot_type?: string;
+  label?: string;
   status: string;
   data: {
     image_url: string;
