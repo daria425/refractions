@@ -4,12 +4,14 @@ import AutoVariantEditor from "./components/AutoVariantEditor";
 import type { ImageResult, EditorState, APIFetchState } from "./types";
 import { flattenStructuredPrompt } from "./utils";
 import { useState } from "react";
+import useVariantData from "./hooks/useVariantData";
 import apiClient from "./api/apiClient";
-import variants from "./config/variants.json";
+// import variants from "./config/variants.json";
 export default function ImageEditor() {
   const location = useLocation();
   const { request_id } = useParams();
   const imageData = location.state as ImageResult;
+  const { fetchedVariants: variants } = useVariantData(request_id!);
   const [editorState, setEditorState] = useState<EditorState>({
     activeEditor: null,
   });

@@ -109,7 +109,12 @@ function LoadingButton() {
   );
 }
 
-export default function AutoVariantEditor({
+function LoadingVariants() {
+  return (
+    <div className="text-white/70 text-sm italic">Loading variants...</div>
+  );
+}
+function LoadedVariants({
   imageVariants,
   fetchVariants: bulkFetchVariants,
   fetchVariantState,
@@ -129,8 +134,7 @@ export default function AutoVariantEditor({
     setShowVariantModal(true);
   };
   return (
-    <div className="space-y-6 max-w-6xl  mx-auto bg-white/5 border border-white/10 rounded-xl p-4">
-      <h2 className="text-lg font-semibold text-white">Variants</h2>
+    <>
       {Object.entries(groups).map(([groupName, variants]) => {
         // CHANGE: Extract button state logic
         const isLoading =
@@ -208,6 +212,33 @@ export default function AutoVariantEditor({
           </div>
         );
       })}
+    </>
+  );
+}
+export default function AutoVariantEditor({
+  imageVariants,
+  fetchVariants: bulkFetchVariants,
+  fetchVariantState,
+  selectedVariantLabel,
+}: {
+  imageVariants: VariantSchema | null;
+  fetchVariants: (variant_label: string) => Promise<void>;
+  fetchVariantState: APIFetchState;
+  selectedVariantLabel: string | null;
+}) {
+  return (
+    <div className="space-y-6 max-w-6xl  mx-auto bg-white/5 border border-white/10 rounded-xl p-4">
+      <h2 className="text-lg font-semibold text-white">Variants</h2>
+      {imageVariants ? (
+        <LoadedVariants
+          imageVariants={imageVariants}
+          fetchVariants={bulkFetchVariants}
+          fetchVariantState={fetchVariantState}
+          selectedVariantLabel={selectedVariantLabel}
+        />
+      ) : (
+        <LoadingVariants />
+      )}
     </div>
   );
 }
