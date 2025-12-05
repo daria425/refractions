@@ -13,7 +13,7 @@ export default function useVariantData(requestId: string) {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiClient.get(`/schema/variants`); // will add requestId later
+      const response = await apiClient.get(`/schema/variants/${requestId}`); // will add requestId later
       setFetchedVariants(response.data as VariantSchema);
     } catch (err: any) {
       const message =
