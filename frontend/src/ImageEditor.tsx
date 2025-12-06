@@ -6,6 +6,7 @@ import { flattenStructuredPrompt } from "./utils";
 import { useState } from "react";
 import useVariantData from "./hooks/useVariantData";
 import apiClient from "./api/apiClient";
+import { Sparkle } from "lucide-react";
 // import variants from "./config/variants.json";
 export default function ImageEditor() {
   const location = useLocation();
@@ -111,10 +112,12 @@ export default function ImageEditor() {
   };
 
   const fetchVariants = async (selectedVariantLabel: string) => {
+    // add selected variant list here
     const requestBody = {
       structured_prompt: imageData.data.structured_prompt,
       shot_type: imageData.shot_type,
       seed: imageData.data.seed,
+      selected_variant_list: variants?.groups[selectedVariantLabel] || [],
     };
     console.log("Will submit request with:", requestBody);
     setCurrentVariantLabel(selectedVariantLabel);
@@ -204,7 +207,7 @@ export default function ImageEditor() {
         </div>
         <div>
           <h5 className="text-white font-semibold text-lg">Menu</h5>
-          <div className="mt-4">
+          <div className="mt-4 gap-4 flex">
             <button
               className="py-2 px-4 rounded-lg border border-white/20 bg-purple-100/20 hover:bg-purple-200 text-white"
               onClick={handleOpenJSONEditor}
@@ -217,8 +220,9 @@ export default function ImageEditor() {
             >
               Auto-Edit
             </button>
-            <button className="py-2 px-4 rounded-lg border border-white/20 bg-purple-400 hover:bg-purple-500 text-white">
+            <button className="py-2 flex gap-2 px-4 rounded-lg border border-white/20 bg-purple-400 hover:bg-purple-500 text-white">
               Improve with AI
+              <Sparkle />
             </button>
           </div>
         </div>

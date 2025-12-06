@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Dict, Optional, Any, Union
+from typing import Dict, Optional, Any, Union, List
 from datetime import datetime
 from pydantic import Field
 class ResultData(BaseModel):
@@ -32,3 +32,4 @@ class VariantGenRequestBody(BaseModel):
     seed:int
     shot_type: str
     structured_prompt: Dict[str, Any]
+    selected_variant_list: List # idk

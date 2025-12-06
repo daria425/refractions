@@ -88,7 +88,7 @@ export default function Main() {
 
   return (
     <div className="container mx-auto px-4 py-12 lg:flex lg:justify-center lg:gap-8">
-      <div>
+      <div className="flex-1">
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-white mb-4">Refractions</h1>
           <p className="text-xl text-purple-200">

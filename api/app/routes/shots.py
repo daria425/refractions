@@ -25,7 +25,7 @@ async def run_variant_generation(
             seed=body.seed,
             request_id=request_id,
             structured_prompt=body.structured_prompt,
-            selected_variant_label=selected_variant_label,
+            selected_variant_list=body.selected_variant_list,
             wait_time=0,
             max_concurrency=4,
             per_request_timeout=120,

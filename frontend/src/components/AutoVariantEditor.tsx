@@ -15,7 +15,7 @@ function GeneratedVariantModal({
   onClose: () => void;
 }) {
   const [zoomedImageSrc, setZoomedImageSrc] = useState<string | null>(null);
-
+  const successfulResults = variantResults.filter((res) => res.status === "ok");
   const handleImageClick = (imageIdx: number) => {
     const selectedImageSrc = variantResults[imageIdx].data.saved_path;
     setZoomedImageSrc(selectedImageSrc);
@@ -50,7 +50,7 @@ function GeneratedVariantModal({
             Generated Variants
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {variantResults.map((res, idx) => (
+            {successfulResults.map((res, idx) => (
               <div
                 key={idx}
                 className="border border-white/10 rounded-lg overflow-hidden bg-white/5"

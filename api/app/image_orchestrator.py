@@ -261,9 +261,6 @@ class ImageGenOrchestrator:
             logger.error("No prompts returned from translation step; skipping generation")
             self.prompts = {}
 
-    def get_variants(self):
-        self.variants = get_variants()["groups"]
-
     async def create_variants(
         self,
         image_gen_client: ImageGenClient,
@@ -271,12 +268,11 @@ class ImageGenOrchestrator:
         seed: int,
         request_id: str,
         structured_prompt: Dict[str, Any],
-        selected_variant_label: str,  # just one for now
+        selected_variant_list: List,
         wait_time: int,
         max_concurrency: int = 4,
         per_request_timeout: int = 120,
     ) -> List[Dict[str, Any]]:
-        selected_variant_list = self.variants.get(selected_variant_label, [])
         semaphore = asyncio.Semaphore(max_concurrency)
         tasks: List[asyncio.Task] = [
             asyncio.create_task(
@@ -362,19 +358,18 @@ class ImageGenOrchestrator:
         seed: int,
         request_id: str,
         structured_prompt: Dict[str, Any],
-        selected_variant_label: str,  # just one for now
+        selected_variant_list: List,
         wait_time: int,
         max_concurrency: int = 4,
         per_request_timeout: int = 120,
     ) -> List[Dict[str, Any]]:
-        self.get_variants()
         return await self.create_variants(
             image_gen_client=image_gen_client,
             images_collection=images_collection,
             seed=seed,
             request_id=request_id,
             structured_prompt=structured_prompt,
-            selected_variant_label=selected_variant_label,
+            selected_variant_list=selected_variant_list,
             wait_time=wait_time,
             max_concurrency=max_concurrency,
             per_request_timeout=per_request_timeout,
