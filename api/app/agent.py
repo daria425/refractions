@@ -69,6 +69,33 @@ def _call_gemini_with_image(
     handle_llm_response(response, response_attr=response_attr)
     return ResponseSuccess(response=getattr(response, response_attr))
 
+def _call_gemini_with_text(
+    *,
+    user_prompt: str,
+    system_prompt_path: str,
+    response_schema: Optional[Type[T]]=None,
+    model:str="gemini-2.5-pro",
+) -> ResponseSuccess:
+    system_instruction = format_prompt(system_prompt_path)
+    generation_config = types.GenerateContentConfig(
+        system_instruction=system_instruction,
+    )
+    if response_schema:
+        generation_config.response_schema = response_schema
+        generation_config.response_mime_type = "application/json"
+    contents = types.Content(
+        role="user",
+        parts=[types.Part.from_text(text=user_prompt)]
+    )
+    response = google_client.models.generate_content(
+        model=model,
+        contents=contents,
+        config=generation_config,
+    )
+    response_attr = "parsed" if response_schema else "text"
+    handle_llm_response(response, response_attr=response_attr)
+    return ResponseSuccess(response=getattr(response, response_attr))
+
 
 @retry_on_failure()
 def translate_vision_to_image_prompt(vision: str, image_bytes: bytes) -> ResponseSuccess:
@@ -134,6 +161,26 @@ Initial prompt for the image:
         response_schema=ImageCritique
     )
 
+@retry_on_failure()
+def create_refinement_prompt(image_critique: ImageCritique):
+    critique_text = image_critique.critique
+    rating = image_critique.overall_rating
+    user_prompt = f"""
+You are given a production-focused image critique and an overall rating for the latest generation. 
+Write ONE refined natural-language text prompt for Bria FIBO to generate the next iteration that directly addresses the critique while preserving the successful aspects. 
+Critique:
+{critique_text}
+
+Overall rating: {rating}/10
+
+Return ONLY the refined text prompt.
+    """
+    return _call_gemini_with_text(
+        user_prompt=user_prompt,
+        system_prompt_path="./app/prompts/create_refinement_prompt.txt",
+        response_schema=None,
+    )
+   
 # if __name__=="__main__":
 #     from app.utils.image_utils import get_image_bytes
 #     image_path="./input_images/tech_drawing_sample.png"
@@ -156,4 +203,7 @@ if __name__=="__main__":
     image_critique=critique_image(
         image_bytes=image_bytes, shot_type=shot_type, generation_details=generation_data
     )
-    print(image_critique)
+    print(image_critique.response)
+    refinement_prompt=create_refinement_prompt(image_critique.response)
+    print(refinement_prompt.response)
+    
