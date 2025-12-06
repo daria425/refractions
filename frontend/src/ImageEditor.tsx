@@ -217,6 +217,9 @@ export default function ImageEditor() {
             >
               Auto-Edit
             </button>
+            <button className="py-2 px-4 rounded-lg border border-white/20 bg-purple-400 hover:bg-purple-500 text-white">
+              Improve with AI
+            </button>
           </div>
         </div>
       </div>

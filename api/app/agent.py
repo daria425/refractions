@@ -4,7 +4,7 @@ from google.genai import types
 from app.services.genai_client import google_client
 from app.utils.response_handlers import handle_llm_response, ResponseSuccess
 from pydantic import BaseModel, Field
-from typing import List, Type, TypeVar
+from typing import List, Type, TypeVar, Dict, Any, Optional
 from app.utils.decorators import retry_on_failure
 
 # ========= Schema Models =========
@@ -34,6 +34,10 @@ class ImageVariants(BaseModel):
 class VariantGroups(BaseModel):
     groups: ImageVariants = Field(..., description="Top-level schema grouping all variant categories")
 
+class ImageCritique(BaseModel):
+    critique:str
+    overall_rating: int = Field(..., ge=1, le=10, description="Overall rating (1-10)")
+
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -42,27 +46,28 @@ def _call_gemini_with_image(
     image_bytes: bytes,
     user_prompt: str,
     system_prompt_path: str,
-    response_schema: Type[T],
+    response_schema: Optional[Type[T]]=None,
+    model:str="gemini-2.5-pro",
 ) -> ResponseSuccess:
     system_instruction = format_prompt(system_prompt_path)
     image_input = create_image_input(image_bytes)
     user_input = types.Part.from_text(text=user_prompt)
     
     generation_config = types.GenerateContentConfig(
-        response_schema=response_schema,
-        response_mime_type="application/json",
         system_instruction=system_instruction,
     )
-    
+    if response_schema:
+        generation_config.response_schema = response_schema
+        generation_config.response_mime_type = "application/json"
     contents = types.Content(role="user", parts=[image_input, user_input])
     response = google_client.models.generate_content(
-        model="gemini-2.5-pro",
+        model=model,
         contents=contents,
         config=generation_config,
     )
-    
-    handle_llm_response(response, response_attr="parsed")
-    return ResponseSuccess(response=response.parsed)
+    response_attr = "parsed" if response_schema else "text"
+    handle_llm_response(response, response_attr=response_attr)
+    return ResponseSuccess(response=getattr(response, response_attr))
 
 
 @retry_on_failure()
@@ -90,12 +95,9 @@ You also have access to the reference image, which you must use to inform the st
 
 @retry_on_failure()
 def plan_variants(image_bytes: bytes, shot_type: str) -> ResponseSuccess:
-    """
-    # CHANGE: Generate dynamic variant schema (lighting/camera/composition/etc.) for given shot_type.
-    """
     user_prompt = f"""
 Context:
-- The shot_type is: "{shot_type}"
+- The shot_type is: {shot_type}
 - Use what you see in the image: subject material (glass/metal/fabric/leather), reflectivity/translucency, current lighting quality and direction, camera viewpoint (pitch/yaw/height), background style (solid/gradient/props), and overall mood.
 
 Requirements:
@@ -116,6 +118,22 @@ Requirements:
         response_schema=VariantGroups,
     )
 
+@retry_on_failure()
+def critique_image(image_bytes:bytes, shot_type:str, generation_details: Dict[str, Any])->ResponseSuccess:
+    user_prompt=f"""
+Please critique the provided image. 
+Context: 
+Intended shot type: {shot_type}
+Initial prompt for the image:
+{generation_details}
+"""
+    return _call_gemini_with_image(
+        user_prompt=user_prompt,
+        image_bytes=image_bytes, 
+        system_prompt_path="./app/prompts/critique.txt", 
+        response_schema=ImageCritique
+    )
+
 # if __name__=="__main__":
 #     from app.utils.image_utils import get_image_bytes
 #     image_path="./input_images/tech_drawing_sample.png"
@@ -123,3 +141,19 @@ Requirements:
 #     image_bytes= get_image_bytes(image_path)
 #     response= translate_vision_to_image_prompt(vision, image_bytes)
 #     print(response.model_dump())
+
+if __name__=="__main__":
+    from app.utils.image_utils import get_image_bytes
+    image_path="https://storage.googleapis.com/refractions/generated_images/generated_image_20251124T215035Z.png"
+    image_bytes=get_image_bytes(
+        image_data=image_path
+    )
+    shot_type="environment"
+    generation_data={
+  "text_prompt": "An environmental lifestyle shot of a model wearing the asymmetrical dress, standing inside a bright, modern art gallery or conservatory flooded with natural light. The background features minimalist sculptures and large potted plants with lush green leaves and delicate spring flowers in bloom, creating soft bokeh. The lighting is natural and airy, catching the draped fabric's folds. Landscape 16:9.",
+  "reasoning": "This shot places the dress in a context that complements its artistic nature—an art gallery. The inclusion of plants and flowers directly ties into the 'Spring, floral' vision, creating a believable and aspirational setting that matches the garment's sophisticated vibe."
+}
+    image_critique=critique_image(
+        image_bytes=image_bytes, shot_type=shot_type, generation_details=generation_data
+    )
+    print(image_critique)

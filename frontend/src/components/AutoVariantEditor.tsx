@@ -4,6 +4,7 @@ import type {
   APIFetchState,
   ImageResult,
 } from "../types";
+import { ZoomIn } from "lucide-react";
 import { useState } from "react";
 
 function GeneratedVariantModal({
@@ -13,47 +14,90 @@ function GeneratedVariantModal({
   variantResults: ImageResult[];
   onClose: () => void;
 }) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="relative max-w-4xl max-h-[80vh] overflow-auto bg-white/10 border border-white/20 rounded-xl p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Close button */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-3 right-3 text-white/70 hover:text-white text-2xl leading-none"
-          aria-label="Close"
-        >
-          ×
-        </button>
+  const [zoomedImageSrc, setZoomedImageSrc] = useState<string | null>(null);
 
-        <h3 className="text-white text-lg font-semibold mb-4">
-          Generated Variants
-        </h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {variantResults.map((res, idx) => (
-            <div
-              key={idx}
-              className="border border-white/10 rounded-lg overflow-hidden bg-white/5"
-            >
-              <img
-                src={res.data.saved_path}
-                alt={`Variant ${idx + 1}`}
-                className="w-full h-auto object-cover"
-              />
-              <div className="p-2 text-xs text-white/70">
-                {res.label || "variant"}
+  const handleImageClick = (imageIdx: number) => {
+    const selectedImageSrc = variantResults[imageIdx].data.saved_path;
+    setZoomedImageSrc(selectedImageSrc);
+  };
+
+  // CHANGE: close zoom modal
+  const handleCloseZoom = () => {
+    setZoomedImageSrc(null);
+  };
+
+  return (
+    <>
+      {/* Main variant grid modal */}
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      >
+        <div
+          className="relative max-w-4xl max-h-[80vh] overflow-auto bg-white/10 border border-white/20 rounded-xl p-6"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-3 right-3 text-white/70 hover:text-white text-2xl leading-none"
+            aria-label="Close"
+          >
+            ×
+          </button>
+
+          <h3 className="text-white text-lg font-semibold mb-4">
+            Generated Variants
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {variantResults.map((res, idx) => (
+              <div
+                key={idx}
+                className="border border-white/10 rounded-lg overflow-hidden bg-white/5"
+              >
+                <div className="relative">
+                  <img
+                    src={res.data.saved_path}
+                    alt={`Variant ${idx + 1}`}
+                    className="w-full h-auto object-cover"
+                  />
+                  <ZoomIn
+                    className="absolute top-2 right-2 w-6 h-6 text-white/80 bg-black/40 rounded-full p-1 cursor-pointer hover:bg-black/60"
+                    onClick={() => handleImageClick(idx)}
+                  />
+                </div>
+                <p className="p-2 text-xs text-white/70">
+                  {res.label || "variant"}
+                </p>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* CHANGE: Full-screen zoom modal */}
+      {zoomedImageSrc && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-md"
+          onClick={handleCloseZoom}
+        >
+          <button
+            type="button"
+            onClick={handleCloseZoom}
+            className="absolute top-4 right-4 text-white/80 hover:text-white text-3xl leading-none"
+            aria-label="Close zoom"
+          >
+            ×
+          </button>
+          <img
+            src={zoomedImageSrc}
+            alt="Zoomed variant"
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+    </>
   );
 }
 function StaticButton({
@@ -74,8 +118,6 @@ function StaticButton({
     </button>
   );
 }
-
-// CHANGE: Removed unused SuccessButton (replaced with inline version in ActionButton logic)
 
 function LoadingButton() {
   return (

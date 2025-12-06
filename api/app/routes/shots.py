@@ -45,3 +45,8 @@ async def run_variant_generation(
     except Exception as e:
         logger.error(f"Variant gen failed: {e}")
         raise HTTPException(status_code=500, detail=f"Variant generation failed: {str(e)}")
+    
+@router.get("/{request_id}/critique")
+async def get_critique():
+    # critique logic here#
+    pass
