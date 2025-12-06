@@ -7,6 +7,10 @@ from app.config.variant_registry import get_variants
 import json
 import asyncio 
 from typing import Any, Dict, List, Literal, Optional, Union, Callable, Awaitable
+from contextlib import asynccontextmanager
+
+# CHANGE: Centralize model version used for generation
+MODEL_VERSION = "FIBO"
 
 
 class ImageGenOrchestrator:
@@ -18,29 +22,33 @@ class ImageGenOrchestrator:
         self.variants: Dict[str, Any] = {}
 
     # ========= Variants / Refinement =========
-    async def refine_one(
+    async def refine_image_variant(
         self,
-        seed: str,  # prev image seed
+        seed: int,  # CHANGE: prev image seed as int for client compatibility
         structured_prompt: Dict[str, Any],  # prev structured prompt
         request_id: str,
         variant_item: Dict[str, str],
         image_gen_client: ImageGenClient,
         images_collection: GeneratedImagesCollection,
-        semaphore: asyncio.Semaphore,
-        wait_time: int,
-        per_request_timeout: int,
+        semaphore: Optional[asyncio.Semaphore] = None,
+        wait_time: int = 0,
+        per_request_timeout: Optional[int] = None,
+        metadata: Optional[Dict[str, Any]]=None # so that we can save the critique n stuff too
     ) -> Dict[str, Any]:
         new_prompt = variant_item.get("description")
         label = variant_item.get("variant_label", "unknown_variant")
         logger.info(f"Refining image for variant '{label}' with prompt: {new_prompt[:200]}")
-        async with semaphore:
+        async with self._maybe_semaphore(semaphore):
             try:
-                refined_result = await asyncio.wait_for(
-                    image_gen_client.refine_prev_image(
-                        seed=seed, structured_prompt=structured_prompt, new_prompt=new_prompt
-                    ),
-                    timeout=per_request_timeout,
+                # CHANGE: Only apply timeout if provided; coerce seed to int defensively
+                seed_int = int(seed)
+                coro = image_gen_client.refine_prev_image(
+                    seed=seed_int, structured_prompt=structured_prompt, new_prompt=new_prompt
                 )
+                if per_request_timeout is not None:
+                    refined_result = await asyncio.wait_for(coro, timeout=per_request_timeout)
+                else:
+                    refined_result = await coro
 
                 if isinstance(refined_result, dict) and "error" in refined_result:
                     logger.error(f"Client returned error for {label}: {refined_result['error']}")
@@ -64,6 +72,9 @@ class ImageGenOrchestrator:
                     },
                     "result_data": refined_result,
                 }
+                if metadata:
+                    saved_data["metadata"]=metadata
+
 
                 try:
                     images_collection.update_image_with_variant(request_id, saved_data)
@@ -74,18 +85,37 @@ class ImageGenOrchestrator:
                 if wait_time:
                     await asyncio.sleep(wait_time)  # optional pacing between variants
 
-                return {"label": label, "status": "ok", "data": refined_result}
+                return {"label": label, "status": "ok", "data": refined_result, "metadata":metadata if metadata else None}
 
             except asyncio.TimeoutError:
-                logger.error(f"Timeout refining variant {label}: exceeded {per_request_timeout}s")
+                timeout_msg = (
+                    f"exceeded {per_request_timeout}s" if per_request_timeout is not None else "timeout"
+                )
+                logger.error(f"Timeout refining variant {label}: {timeout_msg}")
                 return {
                     "label": label,
                     "status": "error",
-                    "error": {"type": "timeout", "message": f"did not complete within {per_request_timeout}s"},
+                    "error": {
+                        "type": "timeout",
+                        "message": (
+                            f"did not complete within {per_request_timeout}s"
+                            if per_request_timeout is not None
+                            else "did not complete"
+                        ),
+                    },
                 }
             except Exception as e:
                 logger.error(f"Unhandled error refining variant {label}: {e}")
                 return {"label": label, "status": "error", "error": {"type": "unhandled", "message": str(e)}}
+
+    @asynccontextmanager
+    async def _maybe_semaphore(self, semaphore: Optional[asyncio.Semaphore]):
+        if semaphore is None:
+            yield
+        else:
+            async with semaphore:
+                yield
+        
 
     def _normalize_structured_prompt(self, result_data: Dict[str, Any], shot_type: str) -> None:
         # CHANGE: normalize structured_prompt returned from API if it's a JSON string
@@ -179,7 +209,7 @@ class ImageGenOrchestrator:
                 wait_time=wait_time,
                 call_coro_fn=lambda: image_gen_client.create_image_from_text(
                     text_prompt=text_prompt,
-                    model_version="FIBO",
+                    model_version=MODEL_VERSION,
                 ),
                 build_saved_data=lambda result_data: {
                     "result_data": result_data,
@@ -210,7 +240,7 @@ class ImageGenOrchestrator:
             wait_time=wait_time,
             call_coro_fn=lambda: image_gen_client.create_image_from_structured_prompt(
                 structured_prompt=user_structured_prompt,
-                model_version="FIBO",
+                model_version=MODEL_VERSION,
             ),
             build_saved_data=lambda result_data: {
                 "result_data": result_data,
@@ -238,7 +268,7 @@ class ImageGenOrchestrator:
         self,
         image_gen_client: ImageGenClient,
         images_collection: GeneratedImagesCollection,
-        seed: str,
+        seed: int,
         request_id: str,
         structured_prompt: Dict[str, Any],
         selected_variant_label: str,  # just one for now
@@ -250,7 +280,7 @@ class ImageGenOrchestrator:
         semaphore = asyncio.Semaphore(max_concurrency)
         tasks: List[asyncio.Task] = [
             asyncio.create_task(
-                self.refine_one(
+                self.refine_image_variant(
                     seed=seed,
                     structured_prompt=structured_prompt,
                     request_id=request_id,
@@ -266,7 +296,7 @@ class ImageGenOrchestrator:
         ]
         return await asyncio.gather(*tasks)
 
-    async def generate_images(
+    async def generate_initial_images_from_prompts(
         self,
         image_gen_client: ImageGenClient,
         images_collection: GeneratedImagesCollection,
@@ -329,7 +359,7 @@ class ImageGenOrchestrator:
         self,
         image_gen_client: ImageGenClient,
         images_collection: GeneratedImagesCollection,
-        seed: str,
+        seed: int,
         request_id: str,
         structured_prompt: Dict[str, Any],
         selected_variant_label: str,  # just one for now
@@ -360,7 +390,7 @@ class ImageGenOrchestrator:
     ) -> List[Dict[str, Any]]:
         self.setup()
         self.get_prompts()
-        return await self.generate_images(
+        return await self.generate_initial_images_from_prompts(
             image_gen_client,
             images_collection,
             wait_time,

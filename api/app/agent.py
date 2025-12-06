@@ -6,6 +6,7 @@ from app.utils.response_handlers import handle_llm_response, ResponseSuccess
 from pydantic import BaseModel, Field
 from typing import List, Type, TypeVar, Dict, Any, Optional
 from app.utils.decorators import retry_on_failure
+from app.utils.logger import logger
 
 # ========= Schema Models =========
 class PromptItem(BaseModel):
@@ -172,22 +173,27 @@ Critique:
 {critique_text}
 
 Overall rating: {rating}/10
-
-Return ONLY the refined text prompt.
-    """
+"""
     return _call_gemini_with_text(
         user_prompt=user_prompt,
         system_prompt_path="./app/prompts/create_refinement_prompt.txt",
-        response_schema=None,
+        response_schema=PromptItem,
     )
    
-# if __name__=="__main__":
-#     from app.utils.image_utils import get_image_bytes
-#     image_path="./input_images/tech_drawing_sample.png"
-#     vision="Minimal luxury"
-#     image_bytes= get_image_bytes(image_path)
-#     response= translate_vision_to_image_prompt(vision, image_bytes)
-#     print(response.model_dump())
+def improve_image(image_bytes: bytes, shot_type: str, generation_details: Dict[str, Any]) -> Dict[str, str]:
+    critique_response = critique_image(
+        image_bytes=image_bytes,
+        shot_type=shot_type,
+        generation_details=generation_details
+    )
+    logger.info(f"Recieved critique {critique_response.response}")
+    refinement_response = create_refinement_prompt(
+        image_critique=critique_response.response
+    )
+    return {
+        "critique": critique_response.response.critique, 
+        "refinement": refinement_response.response.prompt
+    }
 
 if __name__=="__main__":
     from app.utils.image_utils import get_image_bytes
@@ -205,5 +211,5 @@ if __name__=="__main__":
     )
     print(image_critique.response)
     refinement_prompt=create_refinement_prompt(image_critique.response)
-    print(refinement_prompt.response)
+    
     
