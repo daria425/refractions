@@ -11,6 +11,12 @@ export type APIFetchState = {
   error: string | null;
   data: GenerationSuccessResponse | null;
 };
+// # CHANGE: carry metadata alongside edited image previews for compare mode
+export type EditedImageEntry = {
+  path: string;
+  structured_prompt?: any;
+  seed?: number;
+};
 export type ImageResult = {
   shot_type?: string;
   label?: string;
