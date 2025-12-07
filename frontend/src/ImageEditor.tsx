@@ -6,14 +6,15 @@ import type {
   ImageResult,
   EditorState,
   APIFetchState,
-  EditedImageEntry,
+  EditedImageData,
 } from "./types";
 import { flattenStructuredPrompt } from "./utils";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import useVariantData from "./hooks/useVariantData";
 import apiClient from "./api/apiClient";
 import { Sparkle } from "lucide-react";
 import { X, PanelTopOpen } from "lucide-react";
+import JsonDiffViewer from "./components/JSONDiffViewer";
 
 function ContextMenu({
   isOpen,
@@ -73,6 +74,7 @@ export default function ImageEditor() {
     activeEditor: null,
   });
 
+  const [isViewingJSONDiff, setIsViewingJSONDiff] = useState<boolean>(true);
   const [fetchImageEditState, setFetchImageEditState] = useState<APIFetchState>(
     {
       loading: false,
@@ -97,49 +99,16 @@ export default function ImageEditor() {
   const [currentVariantLabel, setCurrentVariantLabel] = useState<string | null>(
     null
   );
-  // # CHANGE: track edited previews with their structured prompts for compare mode
-  const [editedImages, setEditedImages] = useState<EditedImageEntry[]>([]);
+  // # CHANGE: store full edited image data for JSON comparison
+  const [editedImages, setEditedImages] = useState<EditedImageData[]>([]);
   const [editedIndex, setEditedIndex] = useState(0);
-  const [showCompareJSON, setShowCompareJSON] = useState(false);
-
+  console.log("Edited images", editedImages);
   const promptEntries = flattenStructuredPrompt(
     imageData.data.structured_prompt
   );
   const [textAreaJSON, setTextAreaJSON] = useState(
     JSON.stringify(imageData.data.structured_prompt, null, 2)
   );
-  // # CHANGE: precompute formatted JSON snippets for quick compare toggles
-  const originalStructuredPrompt = useMemo(() => {
-    try {
-      return JSON.stringify(imageData.data.structured_prompt, null, 2);
-    } catch (error) {
-      console.error("Could not stringify original structured prompt", error);
-      return "";
-    }
-  }, [imageData.data.structured_prompt]);
-
-  const currentEditedJSON = useMemo(() => {
-    const entry = editedImages[editedIndex];
-    if (!entry?.structured_prompt) return null;
-    try {
-      return JSON.stringify(entry.structured_prompt, null, 2);
-    } catch (error) {
-      console.error("Could not stringify edited structured prompt", error);
-      return null;
-    }
-  }, [editedImages, editedIndex]);
-
-  useEffect(() => {
-    if (editedImages.length === 0) {
-      setEditedIndex(0);
-    }
-  }, [editedImages.length]);
-
-  useEffect(() => {
-    if (editedImages.length === 0 && showCompareJSON) {
-      setShowCompareJSON(false);
-    }
-  }, [editedImages.length, showCompareJSON]);
   const handleEditJson = (newValue: string) => {
     setTextAreaJSON(newValue);
   };
@@ -193,16 +162,11 @@ export default function ImageEditor() {
         error: null,
         data: response.data,
       });
-      const responsePayload = response?.data?.data;
-      const newPath = responsePayload?.saved_path || responsePayload?.image_url;
-      if (newPath) {
-        const nextEntry: EditedImageEntry = {
-          path: newPath,
-          structured_prompt: responsePayload?.structured_prompt,
-          seed: responsePayload?.seed,
-        };
+      // # CHANGE: store entire response data object
+      const editedData = response?.data?.data;
+      if (editedData?.saved_path || editedData?.image_url) {
         setEditedImages((prev) => {
-          const next = [...prev, nextEntry];
+          const next = [...prev, editedData];
           setEditedIndex(next.length - 1);
           return next;
         });
@@ -266,16 +230,11 @@ export default function ImageEditor() {
         error: null,
         data: response.data,
       });
-      const responsePayload = response?.data?.data;
-      const newPath = responsePayload?.saved_path || responsePayload?.image_url;
-      if (newPath) {
-        const nextEntry: EditedImageEntry = {
-          path: newPath,
-          structured_prompt: responsePayload?.structured_prompt,
-          seed: responsePayload?.seed,
-        };
+      // # CHANGE: store entire response data object
+      const editedData = response?.data?.data;
+      if (editedData?.saved_path || editedData?.image_url) {
         setEditedImages((prev) => {
-          const next = [...prev, nextEntry];
+          const next = [...prev, editedData];
           setEditedIndex(next.length - 1);
           return next;
         });
@@ -295,27 +254,19 @@ export default function ImageEditor() {
         {editedImages.length > 0 && (
           <button
             type="button"
-            onClick={() => setShowCompareJSON((prev) => !prev)}
-            aria-pressed={showCompareJSON}
-            className={`py-2 px-4 rounded-lg border border-white/20 flex items-center gap-2 transition-colors ${showCompareJSON ? "bg-purple-500/80 text-white" : "text-white hover:bg-purple-400/10"}`}
+            onClick={() => setIsViewingJSONDiff(true)}
+            className="py-2 px-4 mb-4 rounded-lg border border-white/20 bg-purple-500/80 hover:bg-purple-600 text-white"
           >
-            {showCompareJSON ? "Back to Images" : "Compare JSON"}
-            <PanelTopOpen className="w-4 h-4" />
+            Compare JSON
           </button>
         )}
         <div className="flex gap-4">
           <div>
             <div className="text-sm text-white/70 mb-1">Original</div>
-            {showCompareJSON ? (
-              <pre className="rounded-lg border border-white/10 bg-black/50 p-4 text-left text-xs text-emerald-100 max-w-xl max-h-[520px] overflow-auto whitespace-pre-wrap break-words">
-                {originalStructuredPrompt || "Structured prompt unavailable."}
-              </pre>
-            ) : (
-              <img
-                src={`${imageData.data.saved_path}`}
-                className="rounded-lg max-w-full h-auto"
-              />
-            )}
+            <img
+              src={`${imageData.data.saved_path}`}
+              className="rounded-lg max-w-full h-auto"
+            />
           </div>
           {fetchImageEditState.loading && (
             <div className="text-sm text-yellow-200">Generating edit…</div>
@@ -330,8 +281,6 @@ export default function ImageEditor() {
               handleImageChange={handleImageChange}
               editedImages={editedImages}
               editedIndex={editedIndex}
-              showCompareJSON={showCompareJSON}
-              currentEditedJSON={currentEditedJSON}
             />
           )}
         </div>
@@ -415,6 +364,13 @@ export default function ImageEditor() {
           fetchVariants={fetchVariants}
         />
       </ContextMenu>
+      {isViewingJSONDiff && editedImages.length > 0 && (
+        <JsonDiffViewer
+          structuredPrompt1={imageData.data.structured_prompt}
+          structuredPrompt2={editedImages[editedIndex].structured_prompt}
+          onClose={() => setIsViewingJSONDiff(false)}
+        />
+      )}
     </div>
   );
 }

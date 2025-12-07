@@ -1,12 +1,16 @@
+import type { EditedImageData } from "../types";
+
 export default function EditedImagesContainer({
   editedImages,
   editedIndex,
   handleImageChange,
 }: {
-  editedImages: string[];
+  editedImages: EditedImageData[];
   handleImageChange: (editedIdx: number) => void;
   editedIndex: number;
 }) {
+  const currentImage = editedImages[editedIndex];
+  console.log("Current edited image:", currentImage);
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
@@ -41,8 +45,9 @@ export default function EditedImagesContainer({
         )}
       </div>
       <img
-        src={editedImages[editedIndex]}
+        src={currentImage?.saved_path || currentImage?.image_url}
         className="rounded-lg max-w-full h-auto"
+        alt="Edited preview"
       />
     </div>
   );

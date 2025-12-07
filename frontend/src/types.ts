@@ -11,12 +11,6 @@ export type APIFetchState = {
   error: string | null;
   data: GenerationSuccessResponse | null;
 };
-// # CHANGE: carry metadata alongside edited image previews for compare mode
-export type EditedImageEntry = {
-  path: string;
-  structured_prompt?: any;
-  seed?: number;
-};
 export type ImageResult = {
   shot_type?: string;
   label?: string;
@@ -70,4 +64,13 @@ export type ImageVariants = {
 export type VariantSchema = {
   version?: string;
   groups: ImageVariants;
+};
+
+// # CHANGE: Store complete edited image data for JSON comparison
+export type EditedImageData = {
+  saved_path: string;
+  image_url?: string;
+  structured_prompt: any;
+  seed?: number;
+  request_id?: string;
 };
