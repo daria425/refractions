@@ -16,15 +16,16 @@ async def list_variants():
 
 @router.get("/variants/{request_id}")
 async def get_variants_for_image(request_id:str, generated_images_collection:GeneratedImagesCollection=Depends(GeneratedImagesCollection)):
-	requested_image=generated_images_collection.get_image_by_request_id(request_id=request_id)
-	logger.info(f"Fetching image with {requested_image["result_data"]["saved_path"]} URL")
-	image_bytes=get_image_bytes(requested_image["result_data"]["saved_path"])
-	shot_type=requested_image["shot_type"]
-	variants_resp=plan_variants(image_bytes=image_bytes, shot_type=shot_type)
-	variants=variants_resp.response.model_dump()
-	logger.info(f"Recieved variants {variants}")
-	formatted_variants={
-		"version": "v1", 
-		"groups":variants["groups"]
-	}
-	return formatted_variants
+    requested_image=generated_images_collection.get_image_by_request_id(request_id=request_id)
+    saved_path = requested_image["result_data"]["saved_path"]
+    logger.info(f"Fetching image with {saved_path} URL")
+    image_bytes=get_image_bytes(saved_path)
+    shot_type=requested_image["shot_type"]
+    variants_resp=plan_variants(image_bytes=image_bytes, shot_type=shot_type)
+    variants=variants_resp.response.model_dump()
+    logger.info(f"Received variants {variants}")
+    formatted_variants={
+        "version": "v1", 
+        "groups":variants["groups"]
+    }
+    return formatted_variants

@@ -52,8 +52,9 @@ async def improve_img_from_critique(request_id:str, images_collection:GeneratedI
         orchestrator = ImageGenOrchestrator()
         image_gen_client = get_image_gen_client()
         requested_image=images_collection.get_image_by_request_id(request_id=request_id)
-        logger.info(f"Fetching image with {requested_image["result_data"]["saved_path"]} URL")
-        image_bytes=get_image_bytes(requested_image["result_data"]["saved_path"])
+        saved_path=requested_image["result_data"]["saved_path"]
+        logger.info(f"Fetching image with {saved_path} URL")
+        image_bytes=get_image_bytes(saved_path)
         shot_type=requested_image["shot_type"]
         seed=requested_image["result_data"]["seed"]
         prev_structured_prompt=requested_image["result_data"]["structured_prompt"]

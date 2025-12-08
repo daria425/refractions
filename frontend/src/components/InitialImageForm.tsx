@@ -50,7 +50,7 @@ export default function InitialImageForm({
           htmlFor="image"
           className="block text-sm font-medium text-white mb-2"
         >
-          Upload CAD Design
+          Upload Design Image
         </label>
         <div className="flex items-center justify-center w-full">
           <label

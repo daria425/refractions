@@ -1,6 +1,6 @@
 import axios from "axios";
 import initialGenerationResponse from "../data/api/initial_generation_response.json";
-let baseUrl = "http://127.0.0.1:3000";
+let baseUrl = "http://127.0.0.1:8000";
 if (import.meta.env.MODE === "production") {
   baseUrl = import.meta.env.VITE_API_URL;
 }
@@ -28,9 +28,9 @@ async function mockPost(endpoint: string, requestBody?: any, config?: any) {
   return handleEndpoint(endpoint, requestBody, config);
 }
 
-if (import.meta.env.MODE !== "production") {
-  (apiClient as any).post = mockPost;
-}
+// if (import.meta.env.MODE !== "production") {
+//   (apiClient as any).post = mockPost;
+// }
 
 export { baseUrl };
 export default apiClient;
